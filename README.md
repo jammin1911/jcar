@@ -1,11 +1,11 @@
-# <img src="static/logo.png" width="44" alt="jCar logo"> jCar
+# <img src="media/logo-readme.png" width="38" align="middle" alt="jCar logo"> jCar
 
 jCar is a web app for tracking a vehicle's fuel, service and expenses designed primary for use on mobile but works great on desktop browsers as well. It was created out of frustration of existing self hosted options not including certain useful features that I was used to as a paid user of an app that will not be mentioned :).  My goal was to re-create the experience of my favorite paid app without its limitations while also bringin it in to the modern world with some basic auto-fill and sharing functionality.  jCar runs as one small container on your own server and works like a phone app, including an "Add to Homescreen" shortcut so it opens full screen with its own icon just like a normal app does.
 
 Everything is per user. Each account has its own vehicles, and a vehicle can be shared with another account by invite, so two people can both maintain records on the same car.
 
 <p align="center">
-  <img src="media/hero-sim.gif" width="380" alt="jCar walkthrough: adding a fuel-up and a service record, then statistics and charts">
+  <img src="media/hero-sim.gif" width="260" alt="jCar walkthrough: adding a fuel-up and a service record, then statistics and charts">
   <br>
   <sub>Animation is a simulated demonstration only. The production app runs smooth.</sub>
 </p>
