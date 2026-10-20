@@ -6,6 +6,8 @@ Everything is per user. Each account has its own vehicles, and a vehicle can be 
 
 <p align="center">
   <img src="media/hero-sim.gif" width="380" alt="jCar walkthrough: adding a fuel-up and a service record, then statistics and charts">
+  <br>
+  <sub>Animation is a simulated demonstration only. The production app runs smooth.</sub>
 </p>
 
 ## What it does
