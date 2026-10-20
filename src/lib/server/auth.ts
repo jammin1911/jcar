@@ -4,7 +4,7 @@ import { eq, lt } from 'drizzle-orm';
 import { db, sessions, users } from './db';
 
 export const SESSION_COOKIE = 'jcar_session';
-const SESSION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (Remember Me)
+const SESSION_MS = 365 * 24 * 60 * 60 * 1000; // 365 days (Remember Me)
 const SESSION_SHORT_MS = 24 * 60 * 60 * 1000; // 24 hours (no Remember Me)
 
 export function hashPassword(password: string): string {
