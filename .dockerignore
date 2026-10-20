@@ -6,3 +6,4 @@ data/*.db
 .env
 README.md
 AGENTS.md
+media
