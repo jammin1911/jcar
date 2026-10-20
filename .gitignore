@@ -1,0 +1,14 @@
+node_modules
+build
+.svelte-kit
+
+# local data and secrets, never commit these
+data/
+.env
+
+# private material that lives outside this repo on the maintainer's
+# own deployment (marketing site, working notes, captured samples)
+AGENTS.md
+src/routes/beta/
+static/beta/
+openrouter-example.txt

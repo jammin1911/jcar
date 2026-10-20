@@ -1,0 +1,26 @@
+# jCar, the simple way to run it. This pulls the published image,
+# you do not need the source code or a build step.
+#
+#   1. copy .env.example to .env and set ORIGIN to the address you
+#      will open jCar at
+#   2. docker compose up -d
+#   3. open it in a browser and sign in as "admin" to create the
+#      admin account
+
+name: jcar
+
+services:
+  app:
+    image: ghcr.io/jammin1911/jcar:latest
+    container_name: jcar
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      PORT: "3000"
+      HOST: 0.0.0.0
+      DATABASE_PATH: /app/data/jcar.db
+    volumes:
+      - ./data:/app/data

@@ -1,0 +1,8 @@
+node_modules
+build
+.svelte-kit
+.git
+data/*.db
+.env
+README.md
+AGENTS.md
