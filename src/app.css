@@ -504,3 +504,59 @@ main { flex: 1; }
 .phone[data-theme="dark"] .location-row { color: #c9ccd1; border-bottom-color: #4a4f57; }
 .phone[data-theme="dark"] [stroke="#33691e"] { stroke: #8bc34a; }
 .phone[data-theme="dark"] [fill="#33691e"] { fill: #8bc34a; }
+
+/* Page slide transitions. The layout stamps data-nav with the
+   direction before each in-app navigation; the browser slides
+   snapshots of the pages, compositor work only. The forward slide
+   is also the default for full page loads (form saves), which opt
+   in through the @view-transition rule where a browser supports
+   transitions across loads. */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes jcar-from-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes jcar-to-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Forward: the new page slides in from the right over the old one. */
+::view-transition-old(root) {
+  animation-name: none;
+  z-index: 0;
+}
+::view-transition-new(root) {
+  animation-name: jcar-from-right;
+  z-index: 1;
+}
+
+/* Back to the dashboard: this page slides away to the right and
+   reveals the dashboard sitting underneath it. */
+html[data-nav="back"]::view-transition-old(root) {
+  animation-name: jcar-to-right;
+  z-index: 1;
+}
+html[data-nav="back"]::view-transition-new(root) {
+  animation-name: none;
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
