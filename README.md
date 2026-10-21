@@ -29,6 +29,14 @@ Everything is per user. Each account has its own vehicles, and a vehicle can be 
   around 0.3 cents per image
 - Light and dark themes, your choice of units and date formats
 
+## Demo
+
+A live demo is seeded with sample data so you can click around and try
+everything first. It resets back to the sample data every morning, so
+add, edit and delete whatever you like.
+
+[Try the Demo](https://jcardemo.maiurro.ca)
+
 ## Quick start
 
 Docker Compose
