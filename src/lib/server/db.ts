@@ -331,7 +331,6 @@ CREATE INDEX IF NOT EXISTS record_photos_record ON record_photos(record_id);
 CREATE INDEX IF NOT EXISTS vehicles_owner ON vehicles(owner_id);
 CREATE INDEX IF NOT EXISTS vehicle_parts_vehicle ON vehicle_parts(vehicle_id);
 CREATE INDEX IF NOT EXISTS locations_user ON locations(user_id);
-CREATE INDEX IF NOT EXISTS vehicle_shares_user ON vehicle_shares(user_id, status);
 `;
 
 let initPromise: Promise<void> | null = null;
@@ -395,6 +394,10 @@ export function initDb(): Promise<void> {
       if (!shareCols.rows.some((r) => r.name === 'status')) {
         await client.execute("ALTER TABLE vehicle_shares ADD COLUMN status TEXT NOT NULL DEFAULT 'accepted'");
       }
+      // This index sits on the status column, so it can only be made
+      // once the guard above has had its chance to add it. It cannot
+      // live in INIT_SQL with the other indexes.
+      await client.execute('CREATE INDEX IF NOT EXISTS vehicle_shares_user ON vehicle_shares(user_id, status)');
     })();
   }
   return initPromise;
