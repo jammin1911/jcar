@@ -15,5 +15,6 @@
   error={form?.error}
   values={form?.values ?? data.editing?.values ?? null}
   recordId={data.editing?.id ?? null}
+  recordedBy={data.editing?.recordedBy ?? ''}
   photos={data.editing?.photos ?? []}
 />

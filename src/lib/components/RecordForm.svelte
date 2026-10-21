@@ -36,8 +36,10 @@
     photos?: { id: number; bytes: number }[];
     /** cost tracking vehicle, no odometer or partial/missed fields */
     costTracking?: boolean;
+    /** who entered the record being edited, shown read-only when set */
+    recordedBy?: string;
   }
-  let { title, kind, vehicleName, prevOdometer, defaultDateTime, locationId = null, locationLabel = '', error, info, aiHref, values = null, recordId = null, photos = [], costTracking = false }: Props = $props();
+  let { title, kind, vehicleName, prevOdometer, defaultDateTime, locationId = null, locationLabel = '', error, info, aiHref, values = null, recordId = null, photos = [], costTracking = false, recordedBy = '' }: Props = $props();
 
   const notesLabel = kind === 'service' ? 'Service Notes' : kind === 'expense' ? 'Expense Notes' : '';
   const pickerFrom = recordId ? `${page.url.pathname}?edit=${recordId}` : page.url.pathname;
@@ -129,6 +131,13 @@
     <label>Vehicle</label>
     <div class="field"><div class="readonly-line"><b>{vehicleName}</b></div></div>
   </div>
+
+  {#if recordedBy}
+    <div class="form-row">
+      <label>Recorded by</label>
+      <div class="field"><div class="readonly-line">{recordedBy}</div></div>
+    </div>
+  {/if}
 
   <div class="form-row">
     <label for="dt">Date/Time</label>

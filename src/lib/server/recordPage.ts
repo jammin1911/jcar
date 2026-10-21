@@ -6,6 +6,7 @@ import { getVehicleRecords } from './stats';
 import { nowLocalInput, fmtDateTime, fmtNum, distLabel, type DisplaySettings } from '$lib/format';
 import { fmtOdometer, ungroupOdometer } from '$lib/odometer';
 import { getRecordPhotos } from './photos';
+import { getDisplayName } from './users';
 
 export type RecordKind = 'fuel' | 'service' | 'expense' | 'note';
 
@@ -31,6 +32,8 @@ export interface EditingState {
     datetime: string;
   };
   photos: { id: number; bytes: number }[];
+  /** display name of the user who entered the record, empty when that account is gone */
+  recordedBy: string;
 }
 
 const numStr = (v: number | null | undefined) => (v == null ? '' : String(v));
@@ -70,7 +73,8 @@ export async function loadRecordPage(
         missed: rec.missed === 1,
         datetime: nowLocalInput(new Date(rec.datetime))
       },
-      photos: await getRecordPhotos(rec.id)
+      photos: await getRecordPhotos(rec.id),
+      recordedBy: await getDisplayName(rec.userId)
     };
     editLocationId = rec.locationId ?? null;
   }

@@ -55,8 +55,8 @@
           <span class="date">{r.date}</span>
         </span>
       </div>
-      {#if data.multi}
-        <div class="rec-line3">{r.vehicleName}</div>
+      {#if data.multi || r.recordedBy}
+        <div class="rec-line3">{#if data.multi}{r.vehicleName}{/if}{#if r.recordedBy}{#if data.multi} · {/if}Recorded by: {r.recordedBy}{/if}</div>
       {/if}
     </div>
   </a>

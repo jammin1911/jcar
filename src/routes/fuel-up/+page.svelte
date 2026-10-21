@@ -17,5 +17,6 @@
   info={data.aiNote}
   aiHref={data.editing ? undefined : '/fuel-up/ai'}
   recordId={data.editing?.id ?? null}
+  recordedBy={data.editing?.recordedBy ?? ''}
   photos={data.editing?.photos ?? []}
 />

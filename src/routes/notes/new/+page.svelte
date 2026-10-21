@@ -47,6 +47,13 @@
     <div class="field"><input id="dt" name="datetime" type="datetime-local" value={form?.values?.datetime ?? data.editing?.values.datetime ?? data.defaultDateTime} /></div>
   </div>
 
+  {#if data.editing?.recordedBy}
+    <div class="form-row">
+      <label>Recorded by</label>
+      <div class="field"><div class="readonly-line">{data.editing.recordedBy}</div></div>
+    </div>
+  {/if}
+
   {#if !data.costTracking}
     <div class="form-row">
       <label for="odo">Odometer</label>

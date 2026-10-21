@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { inArray } from 'drizzle-orm';
-import { db, recordPhotos } from '$lib/server/db';
+import { and, eq, inArray } from 'drizzle-orm';
+import { db, recordPhotos, users, vehicleShares } from '$lib/server/db';
 import { getSelectedVehicle, getSettings, getUserVehicles } from '$lib/server/vehicles';
 import { getVehicleRecords, fuelCalcs, fuelSegments } from '$lib/server/stats';
 import { parseBrowseFilter, rangeWindow, filterQuery } from '$lib/server/browseFilter';
@@ -33,8 +33,24 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   // Plan retention: records older than the viewer's cutoff are hidden.
   const cutoff = await retentionCutoff(user.id);
 
+  // A vehicle counts as shared when the viewer got it through a share
+  // or someone else holds an accepted share on it. Only rows on shared
+  // vehicles show who recorded them.
+  const sharedIds = new Set<number>(accessible.filter((a) => !a.isOwner).map((a) => a.vehicle.id));
+  const ownedFiltered = filter.vehicleIds.filter((id) => !sharedIds.has(id));
+  if (ownedFiltered.length) {
+    const shareRows = await db
+      .select({ vehicleId: vehicleShares.vehicleId })
+      .from(vehicleShares)
+      .where(and(inArray(vehicleShares.vehicleId, ownedFiltered), eq(vehicleShares.status, 'accepted')));
+    for (const s of shareRows) sharedIds.add(s.vehicleId);
+  }
+
   interface RowOut {
     id: number;
+    vehicleId: number;
+    userId: number;
+    recordedBy: string;
     type: string;
     href: string;
     vehicleName: string;
@@ -76,6 +92,9 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
       const href = `${r.type === 'fuel' ? '/fuel-up' : r.type === 'service' ? '/service' : r.type === 'expense' ? '/expense' : '/notes/new'}?edit=${r.id}`;
       const base = {
         id: r.id,
+        vehicleId: vid,
+        userId: r.userId,
+        recordedBy: '',
         type: r.type as string,
         href,
         vehicleName: nameOf.get(vid) ?? '',
@@ -137,6 +156,20 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
     for (const r of rows) r.photoCount = tally.get(r.id) ?? 0;
   }
 
+  // Recorder names for the rows on shared vehicles, one lookup for the
+  // whole page. A record keeps the name of whoever entered it, even
+  // when that share has since been revoked.
+  const sharedRows = rows.filter((r) => sharedIds.has(r.vehicleId));
+  if (sharedRows.length) {
+    const ids = [...new Set(sharedRows.map((r) => r.userId))];
+    const people = await db
+      .select({ id: users.id, username: users.username, displayName: users.displayName })
+      .from(users)
+      .where(inArray(users.id, ids));
+    const nameById = new Map(people.map((p) => [p.id, p.displayName?.trim() ? p.displayName : p.username]));
+    for (const r of sharedRows) r.recordedBy = nameById.get(r.userId) ?? '';
+  }
+
   const totalCost = rows.reduce((a, r) => a + r.costNum, 0);
   const overallPer100 = segDist > 0 && segVol > 0 ? (segVol / segDist) * 100 : null;
 
@@ -144,7 +177,7 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
     vehicleName: multi ? `${filter.vehicleIds.length} vehicles` : (nameOf.get(filter.vehicleIds[0]) ?? ''),
     singleVehicleName: nameOf.get(defaultVehicleId) ?? '',
     multi,
-    rows: rows.map(({ t: _t, costNum: _c, ...r }) => r),
+    rows: rows.map(({ t: _t, costNum: _c, vehicleId: _v, userId: _u, ...r }) => r),
     summary: {
       total: fmtMoney(totalCost, 0),
       avgEff: overallPer100 != null ? `${Math.round(effValue(overallPer100, settings))}${effUnitLabel(settings)}` : '-',
