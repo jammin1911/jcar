@@ -17,6 +17,11 @@
   // plain instant swap like before.
   onNavigate((navigation) => {
     if (!data.inApp) return;
+    // Phone width screens only. On anything wider the column sits
+    // in a big window and the slide looks wrong, so desktop keeps
+    // the plain instant swap. Matches the CSS media query in
+    // app.css, which also covers full page loads.
+    if (window.innerWidth > 480) return;
     if (!('startViewTransition' in document)) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (navigation.willUnload) return;
