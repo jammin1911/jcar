@@ -505,18 +505,38 @@ main { flex: 1; }
 .phone[data-theme="dark"] [stroke="#33691e"] { stroke: #8bc34a; }
 .phone[data-theme="dark"] [fill="#33691e"] { fill: #8bc34a; }
 
-/* Page slide transitions. The layout stamps data-nav with the
-   direction before each in-app navigation; the browser slides
-   snapshots of the pages, compositor work only. The forward slide
-   is also the default for full page loads (form saves), which opt
-   in through the @view-transition rule where a browser supports
-   transitions across loads. */
+/* Page slide transitions. Only the app column takes part: it is
+   named as the transition target, so the browser snapshots and
+   slides just the column while the black surround stays put. On a
+   phone the column fills the screen, so it looks the same there;
+   on a desktop the slide stays inside the column instead of
+   crossing the whole window. The layout stamps data-nav with the
+   direction before each in-app navigation, and the slide is
+   compositor work only. The forward slide is also the default for
+   full page loads (form saves), which opt in through the
+   @view-transition rule where a browser supports transitions
+   across loads. */
 @view-transition {
   navigation: auto;
 }
 
+.phone.vt {
+  view-transition-name: phone;
+}
+
+/* The page around the column never moves. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
+  animation: none;
+}
+
+/* The column pair box stays put too, only the snapshots slide. */
+::view-transition-group(phone) {
+  animation: none;
+}
+
+::view-transition-old(phone),
+::view-transition-new(phone) {
   animation-duration: 200ms;
   animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
@@ -534,29 +554,29 @@ main { flex: 1; }
 }
 
 /* Forward: the new page slides in from the right over the old one. */
-::view-transition-old(root) {
+::view-transition-old(phone) {
   animation-name: none;
   z-index: 0;
 }
-::view-transition-new(root) {
+::view-transition-new(phone) {
   animation-name: jcar-from-right;
   z-index: 1;
 }
 
 /* Back to the dashboard: this page slides away to the right and
    reveals the dashboard sitting underneath it. */
-html[data-nav="back"]::view-transition-old(root) {
+html[data-nav="back"]::view-transition-old(phone) {
   animation-name: jcar-to-right;
   z-index: 1;
 }
-html[data-nav="back"]::view-transition-new(root) {
+html[data-nav="back"]::view-transition-new(phone) {
   animation-name: none;
   z-index: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-old(phone),
+  ::view-transition-new(phone) {
     animation: none !important;
   }
 }

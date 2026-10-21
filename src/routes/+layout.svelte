@@ -16,6 +16,7 @@
   // transitions, and anyone with reduced motion set, just get the
   // plain instant swap like before.
   onNavigate((navigation) => {
+    if (!data.inApp) return;
     if (!('startViewTransition' in document)) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (navigation.willUnload) return;
@@ -50,7 +51,7 @@
   {/if}
 </svelte:head>
 
-<div class="phone" data-theme={data.theme}>
+<div class="phone" class:vt={data.inApp} data-theme={data.theme}>
   <main>
     {@render children()}
   </main>

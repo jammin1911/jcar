@@ -20,6 +20,10 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     // src/lib/preloadGuard.ts). Signed in users only, and never on
     // the demo, where one shared account would churn the versions
     // for every visitor.
-    eagerPreload: !!locals.user && !DEMO_MODE
+    eagerPreload: !!locals.user && !DEMO_MODE,
+    // In-app pages (signed in; the demo counts, its visitor is the
+    // demo account) get the column slide transitions. Signed out
+    // pages are full width designs with no column to slide.
+    inApp: !!locals.user
   };
 };
