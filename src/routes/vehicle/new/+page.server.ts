@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { eq } from 'drizzle-orm';
 import { db, vehicles } from '$lib/server/db';
 import { getVehicleAccess, numOrNull, VEHICLE_COOKIE } from '$lib/server/vehicles';
+import { bumpVehicle } from '$lib/server/versions';
 import { ungroupOdometer } from '$lib/odometer';
 import { vehicleLimitBlock } from '$lib/server/plans';
 
@@ -58,7 +59,10 @@ export const actions: Actions = {
     if (editId) {
       const access = await getVehicleAccess(user.id, editId);
       if (!access || !access.isOwner) return fail(403, { error: 'Only the owner can edit this vehicle' });
-      await db.update(vehicles).set(v).where(eq(vehicles.id, editId));
+      await db.transaction(async (tx) => {
+        await tx.update(vehicles).set(v).where(eq(vehicles.id, editId));
+        await bumpVehicle(tx, editId);
+      });
       throw redirect(303, '/vehicle');
     }
 
@@ -71,10 +75,14 @@ export const actions: Actions = {
       });
     }
 
-    const inserted = await db
-      .insert(vehicles)
-      .values({ ...v, ownerId: user.id, createdAt: new Date().toISOString() })
-      .returning({ id: vehicles.id });
+    const inserted = await db.transaction(async (tx) => {
+      const rows = await tx
+        .insert(vehicles)
+        .values({ ...v, ownerId: user.id, createdAt: new Date().toISOString() })
+        .returning({ id: vehicles.id });
+      await bumpVehicle(tx, rows[0].id);
+      return rows;
+    });
     cookies.set(VEHICLE_COOKIE, String(inserted[0].id), { path: '/', maxAge: 60 * 60 * 24 * 365 });
     throw redirect(303, '/');
   }

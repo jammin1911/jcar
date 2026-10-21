@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import { db, users, vehicles } from './db';
+import { memo } from './requestCache';
 
 // Plans. Two of them, both $0 for now, no payment support. The plan
 // picked at signup seeds the accounts fields (plan, vehicle limit,
@@ -77,6 +78,10 @@ export interface UserPlan {
 }
 
 export async function getUserPlan(userId: number): Promise<UserPlan> {
+  return memo(`plan:${userId}`, () => loadUserPlan(userId));
+}
+
+async function loadUserPlan(userId: number): Promise<UserPlan> {
   const rows = await db
     .select({ plan: users.plan, vehicleLimit: users.vehicleLimit, retentionDays: users.retentionDays })
     .from(users)

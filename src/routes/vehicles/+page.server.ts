@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { eq } from 'drizzle-orm';
 import { db, vehicles, records } from '$lib/server/db';
+import { bumpVehicle } from '$lib/server/versions';
 import { deleteVehicleCascade, getUserVehicles, VEHICLE_COOKIE } from '$lib/server/vehicles';
 
 // Manage Vehicles: owners can disable a vehicle (hidden from the
@@ -52,10 +53,13 @@ export const actions: Actions = {
     const id = Number(data.get('vehicleId'));
     const v = await ownedVehicle(user.id, id);
     if (!v) return fail(403, { error: 'Only the owner can manage this vehicle' });
-    await db
-      .update(vehicles)
-      .set({ active: v.active === 0 ? 1 : 0 })
-      .where(eq(vehicles.id, id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(vehicles)
+        .set({ active: v.active === 0 ? 1 : 0 })
+        .where(eq(vehicles.id, id));
+      await bumpVehicle(tx, id);
+    });
     return { toggled: id };
   },
   delete: async ({ request, locals, cookies }) => {
@@ -64,7 +68,9 @@ export const actions: Actions = {
     const id = Number(data.get('vehicleId'));
     const v = await ownedVehicle(user.id, id);
     if (!v) return fail(403, { error: 'Only the owner can delete this vehicle' });
-    await deleteVehicleCascade(id);
+    await db.transaction(async (tx) => {
+      await deleteVehicleCascade(id, tx);
+    });
     if (Number(cookies.get(VEHICLE_COOKIE)) === id) {
       cookies.delete(VEHICLE_COOKIE, { path: '/' });
     }

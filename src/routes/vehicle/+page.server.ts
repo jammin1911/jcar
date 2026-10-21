@@ -102,7 +102,9 @@ export const actions: Actions = {
     const access = await resolveAccess(user.id, cookies, url);
     if (!access) throw redirect(303, '/vehicle/new');
     if (!access.isOwner) return fail(403, { shareError: 'Only the owner can delete this vehicle' });
-    await deleteVehicleCascade(access.vehicle.id);
+    await db.transaction(async (tx) => {
+      await deleteVehicleCascade(access.vehicle.id, tx);
+    });
     cookies.delete('jcar_vehicle', { path: '/' });
     throw redirect(303, '/');
   }

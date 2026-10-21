@@ -1,5 +1,6 @@
 import type { LayoutServerLoad } from './$types';
 import { getSettings } from '$lib/server/vehicles';
+import { DEMO_MODE } from '$lib/server/demo';
 
 /**
  * Root layout data: the Umami analytics ids (from env, nothing gets
@@ -14,6 +15,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   const theme = locals.user ? (await getSettings(locals.user.id)).theme : 'light';
   return {
     umami: scriptUrl && websiteId ? { scriptUrl, websiteId } : null,
-    theme
+    theme,
+    // Eager page preloading with the freshness probe (client side,
+    // src/lib/preloadGuard.ts). Signed in users only, and never on
+    // the demo, where one shared account would churn the versions
+    // for every visitor.
+    eagerPreload: !!locals.user && !DEMO_MODE
   };
 };

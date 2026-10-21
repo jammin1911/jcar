@@ -3,6 +3,7 @@ import path from 'node:path';
 import { eq, inArray } from 'drizzle-orm';
 import sharp from 'sharp';
 import { db, recordPhotos, records, DB_PATH } from './db';
+import type { Exec } from './versions';
 
 // Record photos. Originals are never stored, uploads get re-encoded
 // with sharp (EXIF rotated, max 1600px, JPEG with a quality step down
@@ -88,18 +89,18 @@ export async function processPhotoBuffers(
 }
 
 /** Persist processed images for a record (rows first so the id names the file). */
-export async function storePhotos(recordId: number, buffers: Buffer[]): Promise<void> {
+export async function storePhotos(recordId: number, buffers: Buffer[], exec: Exec = db): Promise<void> {
   if (!buffers.length) return;
   await fs.mkdir(PHOTOS_DIR, { recursive: true });
   for (const buf of buffers) {
-    const rows = await db
+    const rows = await exec
       .insert(recordPhotos)
       .values({ recordId, filename: '', bytes: buf.length, createdAt: new Date().toISOString() })
       .returning({ id: recordPhotos.id });
     const id = rows[0].id;
     const filename = `${id}.jpg`;
     await fs.writeFile(path.join(PHOTOS_DIR, filename), buf);
-    await db.update(recordPhotos).set({ filename }).where(eq(recordPhotos.id, id));
+    await exec.update(recordPhotos).set({ filename }).where(eq(recordPhotos.id, id));
   }
 }
 
@@ -133,27 +134,27 @@ export async function getPhotoRow(photoId: number) {
   return rows[0] ?? null;
 }
 
-export async function deletePhoto(photoId: number): Promise<void> {
+export async function deletePhoto(photoId: number, exec: Exec = db): Promise<void> {
   const row = await getPhotoRow(photoId);
   if (!row) return;
-  await db.delete(recordPhotos).where(eq(recordPhotos.id, photoId));
+  await exec.delete(recordPhotos).where(eq(recordPhotos.id, photoId));
   if (row.filename) await fs.rm(path.join(PHOTOS_DIR, row.filename), { force: true });
 }
 
 /** Remove every photo (rows + files) belonging to the given records. */
-export async function purgePhotosForRecords(recordIds: number[]): Promise<void> {
+export async function purgePhotosForRecords(recordIds: number[], exec: Exec = db): Promise<void> {
   if (!recordIds.length) return;
-  const rows = await db
+  const rows = await exec
     .select()
     .from(recordPhotos)
     .where(inArray(recordPhotos.recordId, recordIds));
   for (const r of rows) {
     if (r.filename) await fs.rm(path.join(PHOTOS_DIR, r.filename), { force: true });
   }
-  await db.delete(recordPhotos).where(inArray(recordPhotos.recordId, recordIds));
+  await exec.delete(recordPhotos).where(inArray(recordPhotos.recordId, recordIds));
 }
 
-export async function purgePhotosForVehicle(vehicleId: number): Promise<void> {
-  const rows = await db.select({ id: records.id }).from(records).where(eq(records.vehicleId, vehicleId));
-  await purgePhotosForRecords(rows.map((r) => r.id));
+export async function purgePhotosForVehicle(vehicleId: number, exec: Exec = db): Promise<void> {
+  const rows = await exec.select({ id: records.id }).from(records).where(eq(records.vehicleId, vehicleId));
+  await purgePhotosForRecords(rows.map((r) => r.id), exec);
 }

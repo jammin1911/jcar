@@ -1,4 +1,36 @@
 import { getVehicleRecords, fuelCalcs, type FuelCalc } from './stats';
+import { vehicleVersion, vehicleVersions } from './computeCache';
+
+// Built charts are the heaviest compute in the app (eleven series
+// over the full history). They are cached under the vehicles data
+// version plus everything else that shapes them (the viewers units,
+// the retention cutoff), so a hit is always the chart a fresh build
+// would produce, and any write makes the entry unreachable.
+const chartCache = new Map<string, ChartDef[]>();
+const spendingCache = new Map<string, ChartPoint[]>();
+
+/** Copy a cached chart set for a caller. The defs carry a compare
+ *  function, which structuredClone cannot take, so the clone is
+ *  field by field: data arrays and rows are copied, the function is
+ *  shared, it is pure. Callers can then sort or annotate their copy
+ *  without touching what the cache holds. */
+function cloneCharts(defs: ChartDef[]): ChartDef[] {
+  return defs.map((d) => ({
+    ...d,
+    points: d.points.map((pt) => ({ ...pt })),
+    fuels: d.fuels ? d.fuels.map((f) => ({ ...f })) : null
+  }));
+}
+
+function cachePut<T>(map: Map<string, T>, key: string, value: T, cap: number): void {
+  map.delete(key);
+  map.set(key, value);
+  while (map.size > cap) {
+    const oldest = map.keys().next().value;
+    if (oldest === undefined) break;
+    map.delete(oldest);
+  }
+}
 import type { DisplaySettings } from '$lib/format';
 
 // Chart series shared by the Charts grid sparklines and the full
@@ -33,6 +65,17 @@ function series(items: (ChartPoint | null)[]): ChartPoint[] {
 }
 
 export async function getCharts(vehicleId: number, s: DisplaySettings, cutoff?: string | null, ignoreOdometer = false): Promise<ChartDef[]> {
+  const version = await vehicleVersion(vehicleId);
+  if (version === null) return buildCharts(vehicleId, s, cutoff, ignoreOdometer);
+  const key = [vehicleId, version, cutoff ?? '', ignoreOdometer ? 1 : 0, s.distanceUnit, s.volumeUnit, s.efficiencyUnit].join('|');
+  const hit = chartCache.get(key);
+  if (hit) return cloneCharts(hit);
+  const built = await buildCharts(vehicleId, s, cutoff, ignoreOdometer);
+  cachePut(chartCache, key, built, 32);
+  return built;
+}
+
+async function buildCharts(vehicleId: number, s: DisplaySettings, cutoff?: string | null, ignoreOdometer = false): Promise<ChartDef[]> {
   const all = await getVehicleRecords(vehicleId, cutoff, ignoreOdometer);
   const fuels = fuelCalcs(all);
   const gal = (l: number | null) => (l == null ? null : s.volumeUnit === 'Gallons' ? l / 3.78541 : l);
@@ -171,6 +214,25 @@ export async function getCharts(vehicleId: number, s: DisplaySettings, cutoff?: 
  * All Vehicles / type toggles recompute it for other scopes.
  */
 export async function getSpendingSeries(
+  vehicleIds: number[],
+  types: string[],
+  cutoff?: string | null
+): Promise<ChartPoint[]> {
+  const versions = await vehicleVersions(vehicleIds);
+  const key = [
+    vehicleIds.join(','),
+    vehicleIds.map((id) => versions.get(id) ?? 'x').join(','),
+    types.join(','),
+    cutoff ?? ''
+  ].join('|');
+  const hit = spendingCache.get(key);
+  if (hit) return hit.map((p) => ({ ...p }));
+  const built = await buildSpendingSeries(vehicleIds, types, cutoff);
+  cachePut(spendingCache, key, built, 32);
+  return built;
+}
+
+async function buildSpendingSeries(
   vehicleIds: number[],
   types: string[],
   cutoff?: string | null

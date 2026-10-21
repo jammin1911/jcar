@@ -3,10 +3,13 @@ import { initDb } from '$lib/server/db';
 import { getSessionUser } from '$lib/server/auth';
 import { DEMO_MODE, getDemoUser } from '$lib/server/demo';
 import { plansEnabled } from '$lib/server/plans';
+import { runWithRequestCache } from '$lib/server/requestCache';
 
 const PUBLIC_PATHS = ['/login', '/register'];
 
-export const handle: Handle = async ({ event, resolve }) => {
+export const handle: Handle = (input) => runWithRequestCache(() => handleRequest(input));
+
+const handleRequest: Handle = async ({ event, resolve }) => {
   await initDb();
 
   // Demo deployment (DEMO_MODE=1): no login at all - every visitor is

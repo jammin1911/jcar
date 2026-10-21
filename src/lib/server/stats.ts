@@ -1,5 +1,5 @@
-import { and, asc, eq, gte } from 'drizzle-orm';
-import { db, records } from './db';
+import { records } from './db';
+import { getAllVehicleRecords } from './computeCache';
 
 export type RecordRow = typeof records.$inferSelect;
 
@@ -15,16 +15,12 @@ export async function getVehicleRecords(
   cutoff?: string | null,
   ignoreOdometer = false
 ): Promise<RecordRow[]> {
-  const rows = await db
-    .select()
-    .from(records)
-    .where(
-      and(
-        eq(records.vehicleId, vehicleId),
-        cutoff ? gte(records.datetime, cutoff) : undefined
-      )
-    )
-    .orderBy(asc(records.datetime), asc(records.id));
+  // The full set comes from the version keyed cache (computeCache):
+  // any write bumps the vehicles data version in its transaction,
+  // so what is cached can never be older than the data it came from.
+  // The retention cutoff is applied here, per viewer, on the way out.
+  const all = await getAllVehicleRecords(vehicleId);
+  const rows = cutoff ? all.filter((r) => r.datetime >= cutoff) : all;
   // Cost tracking vehicles have no odometer, so display queries see
   // every record as odometer-less and the odometer derived figures
   // (economy, distance, $/km) just disappear. Stored values stay put.

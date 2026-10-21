@@ -42,7 +42,10 @@ export const users = sqliteTable('users', {
   /** days of record history visible, NULL means forever. Records are
    *  never deleted for retention, just hidden from the users views. */
   retentionDays: integer('retention_days'),
-  createdAt: text('created_at').notNull()
+  createdAt: text('created_at').notNull(),
+  /** bumped on every change that can alter what this user sees, the
+   *  freshness probe compares it before trusting a preloaded page */
+  dataVersion: integer('data_version').notNull().default(0)
 });
 
 /** Feedback and support messages from users. */
@@ -103,7 +106,9 @@ export const vehicles = sqliteTable('vehicles', {
    *  exists for this entry. Record forms hide the odometer fields and
    *  displays ignore any stored odometer values for the vehicle. */
   costTracking: integer('cost_tracking').notNull().default(0),
-  createdAt: text('created_at').notNull()
+  createdAt: text('created_at').notNull(),
+  /** bumped with every record, photo or part change on the vehicle */
+  dataVersion: integer('data_version').notNull().default(0)
 });
 
 export const vehicleShares = sqliteTable(
@@ -211,7 +216,8 @@ CREATE TABLE IF NOT EXISTS users (
   plan TEXT NOT NULL DEFAULT 'free',
   vehicle_limit INTEGER NOT NULL DEFAULT 2,
   retention_days INTEGER,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  data_version INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS feedback_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -255,7 +261,8 @@ CREATE TABLE IF NOT EXISTS vehicles (
   sold_notes TEXT DEFAULT '',
   active INTEGER NOT NULL DEFAULT 1,
   cost_tracking INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  data_version INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS vehicle_shares (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -319,6 +326,12 @@ CREATE TABLE IF NOT EXISTS user_settings (
   efficiency_unit TEXT DEFAULT 'L/100km',
   theme TEXT DEFAULT 'light'
 );
+CREATE INDEX IF NOT EXISTS records_vehicle_dt ON records(vehicle_id, datetime, id);
+CREATE INDEX IF NOT EXISTS record_photos_record ON record_photos(record_id);
+CREATE INDEX IF NOT EXISTS vehicles_owner ON vehicles(owner_id);
+CREATE INDEX IF NOT EXISTS vehicle_parts_vehicle ON vehicle_parts(vehicle_id);
+CREATE INDEX IF NOT EXISTS locations_user ON locations(user_id);
+CREATE INDEX IF NOT EXISTS vehicle_shares_user ON vehicle_shares(user_id, status);
 `;
 
 let initPromise: Promise<void> | null = null;
@@ -341,6 +354,9 @@ export function initDb(): Promise<void> {
       if (!has('last_login_at')) {
         await client.execute('ALTER TABLE users ADD COLUMN last_login_at INTEGER');
       }
+      if (!has('data_version')) {
+        await client.execute('ALTER TABLE users ADD COLUMN data_version INTEGER NOT NULL DEFAULT 0');
+      }
       if (!has('plan')) {
         await client.execute("ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'");
         await client.execute('ALTER TABLE users ADD COLUMN vehicle_limit INTEGER NOT NULL DEFAULT 2');
@@ -361,6 +377,9 @@ export function initDb(): Promise<void> {
       }
       if (!vehCols.rows.some((r) => r.name === 'cost_tracking')) {
         await client.execute('ALTER TABLE vehicles ADD COLUMN cost_tracking INTEGER NOT NULL DEFAULT 0');
+      }
+      if (!vehCols.rows.some((r) => r.name === 'data_version')) {
+        await client.execute('ALTER TABLE vehicles ADD COLUMN data_version INTEGER NOT NULL DEFAULT 0');
       }
       const setCols = await client.execute('PRAGMA table_info(user_settings)');
       if (!setCols.rows.some((r) => r.name === 'theme')) {

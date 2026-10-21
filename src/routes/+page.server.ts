@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { and, asc, eq } from 'drizzle-orm';
 import { db, vehicles, vehicleShares } from '$lib/server/db';
+import { bumpUsers, bumpVehicle, vehicleAudience } from '$lib/server/versions';
 import { getUserVehicles, VEHICLE_COOKIE } from '$lib/server/vehicles';
 import { getUserIdentity } from '$lib/server/users';
 import { DEMO_MODE } from '$lib/server/demo';
@@ -88,7 +89,10 @@ export const actions: Actions = {
       )
       .limit(1);
     if (rows[0]) {
-      await db.update(vehicleShares).set({ status: 'accepted' }).where(eq(vehicleShares.id, shareId));
+      await db.transaction(async (tx) => {
+        await tx.update(vehicleShares).set({ status: 'accepted' }).where(eq(vehicleShares.id, shareId));
+        await bumpVehicle(tx, rows[0].vehicleId);
+      });
     }
     throw redirect(303, '/');
   },
@@ -108,7 +112,10 @@ export const actions: Actions = {
       )
       .limit(1);
     if (rows[0]) {
-      await db.delete(vehicleShares).where(eq(vehicleShares.id, shareId));
+      await db.transaction(async (tx) => {
+        await tx.delete(vehicleShares).where(eq(vehicleShares.id, shareId));
+        await bumpUsers(tx, [user.id, ...(await vehicleAudience(tx, rows[0].vehicleId))]);
+      });
     }
     throw redirect(303, '/');
   }

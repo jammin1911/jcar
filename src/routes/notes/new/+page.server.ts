@@ -9,6 +9,8 @@ import {
   validateRecordInput,
   failValues
 } from '$lib/server/recordPage';
+import { db } from '$lib/server/db';
+import { bumpVehicle } from '$lib/server/versions';
 import { extractPhotoFiles, checkPhotoSizes, processPhotoBuffers, storePhotos } from '$lib/server/photos';
 
 export const load: PageServerLoad = async ({ locals, cookies, url }) => {
@@ -37,15 +39,19 @@ export const actions: Actions = {
       return fail(400, { error: processed.error, ...(await failValues(user.id, input)) });
     }
 
-    let recordId = editId;
     if (editId) {
       const rec = await getEditableRecord(page.vehicleId, 'note', editId);
       if (!rec) return fail(404, { error: 'That record no longer exists.' });
-      await updateRecord(editId, input);
-    } else {
-      recordId = await insertRecord(user.id, page.vehicleId, input);
     }
-    await storePhotos(recordId, processed.buffers);
+    // The write, its photos and the version bump land together, so a
+    // version can never describe data that is not there yet (or miss
+    // data that is).
+    await db.transaction(async (tx) => {
+      const id = editId || (await insertRecord(user.id, page.vehicleId, input, tx));
+      if (editId) await updateRecord(editId, input, tx);
+      await storePhotos(id, processed.buffers, tx);
+      await bumpVehicle(tx, page.vehicleId);
+    });
     throw redirect(303, '/browse');
   }
 };

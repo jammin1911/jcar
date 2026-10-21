@@ -1110,6 +1110,7 @@ export function scanFuelLog(text: string, fileName: string): ScanResult {
 // Executors, only ever called after the user confirms a scan.
 
 import { db, records, vehicles, vehicleParts, locations, userSettings } from './db';
+import { bumpVehicle, bumpUser } from './versions';
 
 export interface NormalizedImportResult {
   vehicleCount: number;
@@ -1123,14 +1124,16 @@ export async function executeNormalizedImport(
   userId: number,
   scan: ScanResult
 ): Promise<NormalizedImportResult> {
+  return await db.transaction(async (tx) => {
   const now = new Date().toISOString();
   let recordCount = 0;
+  const created: number[] = [];
   if (scan.target === 'selected') {
     const vid = scan.targetVehicleId;
     if (vid === null) throw new Error('No target vehicle for this import.');
     for (const v of scan.vehicles) {
       for (const r of v.records) {
-        await db.insert(records).values({
+        await tx.insert(records).values({
           vehicleId: vid,
           userId,
           type: r.type,
@@ -1149,12 +1152,13 @@ export async function executeNormalizedImport(
         recordCount++;
       }
     }
+    await bumpVehicle(tx, vid);
     return { vehicleCount: 0, recordCount, firstVehicleId: vid };
   }
   let firstVehicleId: number | null = null;
   let vehicleCount = 0;
   for (const v of scan.vehicles) {
-    const inserted = await db
+    const inserted = await tx
       .insert(vehicles)
       .values({
         ownerId: userId,
@@ -1187,10 +1191,11 @@ export async function executeNormalizedImport(
       })
       .returning({ id: vehicles.id });
     const vid = inserted[0].id;
+    created.push(vid);
     if (firstVehicleId === null) firstVehicleId = vid;
     vehicleCount++;
     for (const r of v.records) {
-      await db.insert(records).values({
+      await tx.insert(records).values({
         vehicleId: vid,
         userId,
         type: r.type,
@@ -1209,7 +1214,9 @@ export async function executeNormalizedImport(
       recordCount++;
     }
   }
+  for (const vid of created) await bumpVehicle(tx, vid);
   return { vehicleCount, recordCount, firstVehicleId };
+  });
 }
 
 /** Restores a jCar JSON backup. */
@@ -1217,12 +1224,14 @@ export async function executeJcarBackup(
   userId: number,
   parsed: any
 ): Promise<NormalizedImportResult> {
+  return await db.transaction(async (tx) => {
   let vehicleCount = 0;
+  const created: number[] = [];
   let recordCount = 0;
   let firstVehicleId: number | null = null;
   for (const v of parsed.vehicles) {
     const { parts = [], records: recs = [], ...veh } = v;
-    const inserted = await db
+    const inserted = await tx
       .insert(vehicles)
       .values({
         ownerId: userId,
@@ -1255,10 +1264,11 @@ export async function executeJcarBackup(
       })
       .returning({ id: vehicles.id });
     const vid = inserted[0].id;
+    created.push(vid);
     if (firstVehicleId === null) firstVehicleId = vid;
     vehicleCount++;
     for (const p of parts) {
-      await db.insert(vehicleParts).values({
+      await tx.insert(vehicleParts).values({
         vehicleId: vid,
         name: String(p.name ?? ''),
         partNumber: p.partNumber ?? '',
@@ -1272,7 +1282,7 @@ export async function executeJcarBackup(
       });
     }
     for (const r of recs) {
-      await db.insert(records).values({
+      await tx.insert(records).values({
         vehicleId: vid,
         userId,
         type: ['fuel', 'service', 'expense', 'note'].includes(r.type) ? r.type : 'fuel',
@@ -1292,7 +1302,7 @@ export async function executeJcarBackup(
     }
   }
   for (const l of parsed.locations ?? []) {
-    await db.insert(locations).values({
+    await tx.insert(locations).values({
       userId,
       street: l.street ?? '',
       city: l.city ?? '',
@@ -1310,10 +1320,13 @@ export async function executeJcarBackup(
       volumeUnit: parsed.settings.volumeUnit ?? 'Liters',
       efficiencyUnit: parsed.settings.efficiencyUnit ?? 'L/100km'
     };
-    await db
+    await tx
       .insert(userSettings)
       .values(st)
       .onConflictDoUpdate({ target: userSettings.userId, set: st });
   }
+  for (const vid of created) await bumpVehicle(tx, vid);
+  await bumpUser(tx, userId);
   return { vehicleCount, recordCount, firstVehicleId };
+  });
 }

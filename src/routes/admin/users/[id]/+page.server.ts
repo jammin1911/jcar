@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { requireAdmin, getUserStat, getUserVehicleNames, fmtBytes } from '$lib/server/admin';
 import { getSettings } from '$lib/server/vehicles';
 import { deleteUserCascade } from '$lib/server/users';
+import { bumpUser } from '$lib/server/versions';
 import { hashPassword } from '$lib/server/auth';
 import { plansEnabled } from '$lib/server/plans';
 import { db, users, sessions } from '$lib/server/db';
@@ -62,7 +63,10 @@ export const actions: Actions = {
         return fail(400, { error: 'Retention days must be a positive number, or blank for Forever' });
       }
     }
-    await db.update(users).set({ plan, vehicleLimit, retentionDays }).where(eq(users.id, id));
+    await db.transaction(async (tx) => {
+      await tx.update(users).set({ plan, vehicleLimit, retentionDays }).where(eq(users.id, id));
+      await bumpUser(tx, id);
+    });
     return { message: 'Plan updated.' };
   },
 
@@ -95,7 +99,9 @@ export const actions: Actions = {
     if (target.isAdmin) {
       return fail(400, { error: 'The admin account cannot be deleted.' });
     }
-    await deleteUserCascade(id);
+    await db.transaction(async (tx) => {
+      await deleteUserCascade(id, tx);
+    });
     throw redirect(303, '/admin/users');
   }
 };

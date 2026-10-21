@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db, records, vehicles, vehicleParts, locations } from './db';
+import { bumpVehicle } from './versions';
 import type { AbpVehicle } from './abp';
 
 /**
@@ -146,6 +147,7 @@ export async function executeAbpImport(
     latestVehicleId: null
   };
   let latestDt = '';
+  const touched = new Set<number>();
 
   await db.transaction(async (tx) => {
     // Locations from record places, deduped by street+city. In merge
@@ -243,6 +245,7 @@ export async function executeAbpImport(
         out.newVehicles++;
       }
 
+      touched.add(vid);
       const held = matchedId !== undefined ? analysis!.existing.get(matchedId) : undefined;
       for (const p of v.parts) {
         if (held) {
@@ -290,6 +293,7 @@ export async function executeAbpImport(
         }
       }
     }
+    for (const vid of touched) await bumpVehicle(tx, vid);
   });
 
   return out;

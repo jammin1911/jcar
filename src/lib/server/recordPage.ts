@@ -7,6 +7,7 @@ import { nowLocalInput, fmtDateTime, fmtNum, distLabel, type DisplaySettings } f
 import { fmtOdometer, ungroupOdometer } from '$lib/odometer';
 import { getRecordPhotos } from './photos';
 import { getDisplayName } from './users';
+import type { Exec } from './versions';
 
 export type RecordKind = 'fuel' | 'service' | 'expense' | 'note';
 
@@ -228,9 +229,9 @@ function deriveFuel(input: RecordInput) {
   return { totalCost, pricePerUnit, volume };
 }
 
-export async function insertRecord(userId: number, vehicleId: number, input: RecordInput): Promise<number> {
+export async function insertRecord(userId: number, vehicleId: number, input: RecordInput, exec: Exec = db): Promise<number> {
   const { totalCost, pricePerUnit, volume } = deriveFuel(input);
-  const rows = await db
+  const rows = await exec
     .insert(records)
     .values({
       vehicleId,
@@ -252,9 +253,9 @@ export async function insertRecord(userId: number, vehicleId: number, input: Rec
 }
 
 /** Update an existing record from form input (title and author preserved). */
-export async function updateRecord(recordId: number, input: RecordInput): Promise<void> {
+export async function updateRecord(recordId: number, input: RecordInput, exec: Exec = db): Promise<void> {
   const { totalCost, pricePerUnit, volume } = deriveFuel(input);
-  await db
+  await exec
     .update(records)
     .set({
       datetime: input.datetime,

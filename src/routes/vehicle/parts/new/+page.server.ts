@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { eq } from 'drizzle-orm';
 import { db, vehicleParts, vehicles } from '$lib/server/db';
+import { bumpVehicle } from '$lib/server/versions';
 import { getSelectedVehicle, numOrNull } from '$lib/server/vehicles';
 
 /** Load a part for editing, verifying the signed-in user owns its
@@ -70,13 +71,19 @@ export const actions: Actions = {
       // Edit: the part must belong to a vehicle this user owns.
       const row = await ownedPart(partId, user.id);
       if (!row) throw redirect(303, '/vehicle');
-      await db.update(vehicleParts).set(fields).where(eq(vehicleParts.id, partId));
+      await db.transaction(async (tx) => {
+        await tx.update(vehicleParts).set(fields).where(eq(vehicleParts.id, partId));
+        await bumpVehicle(tx, row.part.vehicleId);
+      });
       throw redirect(303, '/vehicle');
     }
 
     const access = await getSelectedVehicle(cookies, user.id);
     if (!access) throw redirect(303, '/vehicle/new');
-    await db.insert(vehicleParts).values({ vehicleId: access.vehicle.id, ...fields });
+    await db.transaction(async (tx) => {
+      await tx.insert(vehicleParts).values({ vehicleId: access.vehicle.id, ...fields });
+      await bumpVehicle(tx, access.vehicle.id);
+    });
     throw redirect(303, '/vehicle');
   }
 };

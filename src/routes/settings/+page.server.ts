@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { eq } from 'drizzle-orm';
 import { db, userSettings } from '$lib/server/db';
+import { bumpUser } from '$lib/server/versions';
 import { getSettings } from '$lib/server/vehicles';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -20,10 +21,13 @@ export const actions: Actions = {
       efficiencyUnit: String(data.get('efficiencyUnit') ?? 'L/100km'),
       theme: String(data.get('theme') ?? 'light') === 'dark' ? 'dark' : 'light'
     };
-    await db
-      .insert(userSettings)
-      .values(values)
-      .onConflictDoUpdate({ target: userSettings.userId, set: values });
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(userSettings)
+        .values(values)
+        .onConflictDoUpdate({ target: userSettings.userId, set: values });
+      await bumpUser(tx, user.id);
+    });
     return { saved: true };
   }
 };

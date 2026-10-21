@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { and, asc, eq } from 'drizzle-orm';
 import { db, vehicles, vehicleShares } from '$lib/server/db';
+import { bumpUsers, bumpVehicle, vehicleAudience } from '$lib/server/versions';
 import { findUserByEmail, getUserIdentity } from '$lib/server/users';
 import { getVehicleAccess } from '$lib/server/vehicles';
 
@@ -110,7 +111,10 @@ export const actions: Actions = {
             : `This vehicle is already shared with ${targetName}`
       });
     }
-    await db.insert(vehicleShares).values({ vehicleId, userId: target.id, status: 'pending' });
+    await db.transaction(async (tx) => {
+      await tx.insert(vehicleShares).values({ vehicleId, userId: target.id, status: 'pending' });
+      await bumpUsers(tx, [user.id, target.id]);
+    });
     return { ok: `Invite sent to ${targetName} - they can accept it on their Sharing page` };
   },
 
@@ -119,7 +123,10 @@ export const actions: Actions = {
     const shareId = Number((await request.formData()).get('shareId'));
     const row = await myShare(shareId, user.id);
     if (!row || row.status !== 'pending') return fail(400, { error: 'That invite is no longer pending' });
-    await db.update(vehicleShares).set({ status: 'accepted' }).where(eq(vehicleShares.id, shareId));
+    await db.transaction(async (tx) => {
+      await tx.update(vehicleShares).set({ status: 'accepted' }).where(eq(vehicleShares.id, shareId));
+      await bumpVehicle(tx, row.vehicleId);
+    });
     return { ok: 'Vehicle shared with you - it is now in your vehicle selector' };
   },
 
@@ -128,7 +135,10 @@ export const actions: Actions = {
     const shareId = Number((await request.formData()).get('shareId'));
     const row = await myShare(shareId, user.id);
     if (!row || row.status !== 'pending') return fail(400, { error: 'That invite is no longer pending' });
-    await db.delete(vehicleShares).where(eq(vehicleShares.id, shareId));
+    await db.transaction(async (tx) => {
+      await tx.delete(vehicleShares).where(eq(vehicleShares.id, shareId));
+      await bumpUsers(tx, [user.id, ...(await vehicleAudience(tx, row.vehicleId))]);
+    });
     return { ok: 'Invite declined' };
   },
 
@@ -137,7 +147,11 @@ export const actions: Actions = {
     const shareId = Number((await request.formData()).get('shareId'));
     const row = await myShare(shareId, user.id);
     if (!row || row.status !== 'accepted') return fail(400, { error: 'That share is not active' });
-    await db.delete(vehicleShares).where(eq(vehicleShares.id, shareId));
+    await db.transaction(async (tx) => {
+      const audience = await vehicleAudience(tx, row.vehicleId);
+      await tx.delete(vehicleShares).where(eq(vehicleShares.id, shareId));
+      await bumpUsers(tx, [user.id, ...audience]);
+    });
     return { ok: 'Vehicle removed from your account' };
   },
 
@@ -151,7 +165,10 @@ export const actions: Actions = {
     if (!access || !access.isOwner) {
       return fail(403, { error: 'Only the owner can change sharing' });
     }
-    await db.delete(vehicleShares).where(eq(vehicleShares.id, shareId));
+    await db.transaction(async (tx) => {
+      await tx.delete(vehicleShares).where(eq(vehicleShares.id, shareId));
+      await bumpUsers(tx, [user.id, row.userId]);
+    });
     return { ok: 'Share removed' };
   }
 };
