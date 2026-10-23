@@ -558,6 +558,10 @@ main { flex: 1; }
      reveals the dashboard sitting underneath it. */
   html[data-nav="back"]::view-transition-old(phone) {
     animation-name: jcar-to-right;
+    /* hold the slid-off position until the browser drops the
+       snapshot layer, without this the snapshot snaps back over
+       the dashboard for a frame when the animation ends first */
+    animation-fill-mode: forwards;
     z-index: 1;
   }
   html[data-nav="back"]::view-transition-new(phone) {
