@@ -69,6 +69,78 @@
     pending = pending.filter((_, j) => j !== i);
     syncPhotoInput();
   }
+
+  // the fuel numbers are live linked: on every keystroke one of
+  // price, volume and total is calculated from the other two. the
+  // calculated field is the empty one when there is exactly one, and
+  // otherwise follows the preference order total, then volume, then
+  // price, sticking with the field the calc already owns when it can.
+  type FuelField = 'price' | 'volume' | 'total';
+  const FUEL_PREF: FuelField[] = ['total', 'volume', 'price'];
+  let price = $state(values?.price ?? '');
+  let volume = $state(values?.volume ?? '');
+  let totalCost = $state(values?.totalCost ?? '');
+  // the field whose current value came from the calc, if any. only a
+  // machine filled value is ever cleared again by the calc, a value
+  // the user typed or a saved one is left alone.
+  let fuelMachine = $state<FuelField | null>(null);
+
+  function fuelNum(s: string): number {
+    const n = parseFloat(s);
+    return s.trim() !== '' && Number.isFinite(n) && n >= 0 ? n : NaN;
+  }
+  function fuelFmt(n: number, field: FuelField): string {
+    if (field === 'total') return n.toFixed(2);
+    return n.toFixed(3).replace(/\.?0+$/, '');
+  }
+  function fuelSet(field: FuelField, text: string) {
+    if (field === 'price') price = text;
+    else if (field === 'volume') volume = text;
+    else totalCost = text;
+  }
+  function fuelValue(field: FuelField): string {
+    return field === 'price' ? price : field === 'volume' ? volume : totalCost;
+  }
+  function fuelChoose(edited: FuelField): FuelField | null {
+    const others = FUEL_PREF.filter((f) => f !== edited);
+    const empty = others.filter((f) => fuelValue(f).trim() === '');
+    if (empty.length === 1) return empty[0];
+    if (empty.length === 2) return null;
+    if (fuelMachine && others.includes(fuelMachine)) return fuelMachine;
+    return others[0];
+  }
+  function onFuelInput(field: FuelField, e: Event) {
+    fuelSet(field, (e.currentTarget as HTMLInputElement).value);
+    if (fuelMachine === field) fuelMachine = null;
+    const d = fuelChoose(field);
+    if (!d) return;
+    let out: number | null = null;
+    if (d === 'total') {
+      const p = fuelNum(price), v = fuelNum(volume);
+      if (!Number.isNaN(p) && !Number.isNaN(v)) out = p * v;
+    } else if (d === 'volume') {
+      const p = fuelNum(price), t = fuelNum(totalCost);
+      if (!Number.isNaN(p) && !Number.isNaN(t) && p > 0) out = t / p;
+    } else {
+      const v = fuelNum(volume), t = fuelNum(totalCost);
+      if (!Number.isNaN(v) && !Number.isNaN(t) && v > 0) out = t / v;
+    }
+    if (out !== null) {
+      fuelSet(d, fuelFmt(out, d));
+      fuelMachine = d;
+    } else if (fuelMachine === d) {
+      fuelSet(d, '');
+      fuelMachine = null;
+    }
+  }
+  // a prefill can land price and volume with no total, fill it in
+  if (kind === 'fuel' && totalCost === '') {
+    const p = fuelNum(price), v = fuelNum(volume);
+    if (!Number.isNaN(p) && !Number.isNaN(v)) {
+      totalCost = fuelFmt(p * v, 'total');
+      fuelMachine = 'total';
+    }
+  }
 </script>
 
 <SubHeader {title} save formId="record-form" secondaryHref={aiHref} secondaryLabel="AI" />
@@ -96,15 +168,15 @@
   {#if kind === 'fuel'}
     <div class="form-row">
       <label for="price">Price</label>
-      <div class="field"><input id="price" name="price" type="number" step="any" inputmode="decimal" placeholder="----------" value={values?.price ?? ''} /></div>
+      <div class="field"><input id="price" name="price" type="number" step="any" inputmode="decimal" placeholder="----------" value={price} oninput={(e) => onFuelInput('price', e)} /></div>
     </div>
     <div class="form-row">
       <label for="vol">Volume</label>
-      <div class="field"><input id="vol" name="volume" type="number" step="any" inputmode="decimal" placeholder="----------" value={values?.volume ?? ''} /></div>
+      <div class="field"><input id="vol" name="volume" type="number" step="any" inputmode="decimal" placeholder="----------" value={volume} oninput={(e) => onFuelInput('volume', e)} /></div>
     </div>
     <div class="form-row">
       <label for="cost">Total Cost</label>
-      <div class="field"><input id="cost" name="totalCost" type="number" step="any" inputmode="decimal" placeholder="----------" value={values?.totalCost ?? ''} /></div>
+      <div class="field"><input id="cost" name="totalCost" type="number" step="any" inputmode="decimal" placeholder="----------" value={totalCost} oninput={(e) => onFuelInput('total', e)} /></div>
     </div>
     {#if !costTracking}
       <div class="check-row">
