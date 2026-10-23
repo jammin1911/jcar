@@ -5,9 +5,9 @@ jCar is a web app for tracking a vehicle's fuel, service and expenses designed p
 Everything is per user. Each account has its own vehicles, and a vehicle can be shared with another account by invite, so two people can both maintain records on the same car.
 
 <p align="center">
-  <img src="media/hero-sim.gif" width="260" alt="jCar walkthrough: adding a fuel-up and a service record, then statistics and charts">
+  <img src="media/hero-sim.webp" width="260" alt="jCar walkthrough: adding a fuel-up and a service record, browsing records, charts, and settings">
   <br>
-  <sub>Animation is a simulated demonstration only. The production app runs smooth.</sub>
+  <sub>A real recording of the live demo.</sub>
 </p>
 
 ## What it does
