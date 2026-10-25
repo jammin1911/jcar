@@ -15,6 +15,24 @@
   --grey: #8a8a8a;
   --line: #ddd;
   --bg: #f7f7f7;
+  /* the dashboard icon set paints with these so one drawing covers
+     both themes, the dark block below re-points them */
+  --jc-icon-surface: var(--bg);
+  --jc-icon-blue: #167fce;
+  --jc-icon-blue-soft: #e8f4ff;
+  --jc-icon-display: #c8e6c9;
+  --jc-icon-green: #278653;
+  --jc-icon-green-soft: #e5f5eb;
+  --jc-icon-amber: #ad7900;
+  --jc-icon-amber-soft: #fff2c9;
+  --jc-icon-slate: #526873;
+  --jc-icon-slate-soft: #e8eef1;
+  --jc-icon-teal: #168f88;
+  --jc-icon-purple: #7859c5;
+  --jc-icon-orange: #d87524;
+  --jc-icon-orange-soft: #fff0df;
+  --jc-icon-red: #d94747;
+  --jc-icon-red-soft: #ffebeb;
 }
 
 * { box-sizing: border-box; }
@@ -477,6 +495,22 @@ main { flex: 1; }
   --grey: #9aa0a8;
   --line: #33373d;
   --bg: #14161a;
+  --jc-icon-surface: var(--bg);
+  --jc-icon-blue: #64baff;
+  --jc-icon-blue-soft: #203b50;
+  --jc-icon-display: #7d9b80;
+  --jc-icon-green: #6bd59a;
+  --jc-icon-green-soft: #1d3a2b;
+  --jc-icon-amber: #e6bd55;
+  --jc-icon-amber-soft: #3a301a;
+  --jc-icon-slate: #a6bbc5;
+  --jc-icon-slate-soft: #2a3840;
+  --jc-icon-teal: #5bcfc4;
+  --jc-icon-purple: #b29aff;
+  --jc-icon-orange: #ffad68;
+  --jc-icon-orange-soft: #422b19;
+  --jc-icon-red: #ff8585;
+  --jc-icon-red-soft: #422528;
   color-scheme: dark;
 }
 .phone[data-theme="dark"] .veh-dropdown { background: #1d2025; }
