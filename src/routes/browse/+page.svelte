@@ -1,6 +1,6 @@
 <script lang="ts">
   import SubHeader from '$lib/components/SubHeader.svelte';
-  import { icons, iconsDark, pumpIcon, filterIcon } from '$lib/icons';
+  import { icons, iconsDark, pumpIcon, filterIcon, backfillIcon } from '$lib/icons';
 
   // All four entry types (fuel-up, service, expense, note) live in the
   // one records list, and each renders its own icon here.
@@ -16,7 +16,7 @@
   };
 </script>
 
-<SubHeader title="Browse Records" actionHref={data.filterHref} actionIcon={filterIcon} actionLabel="Filter records" />
+<SubHeader title="Browse Records" actionHref={data.filterHref} actionIcon={filterIcon} actionLabel="Filter records" action2Href={data.backfillHref} action2Icon={backfillIcon} action2Label="Backfill records" />
 
 <div class="summary-bar">
   <span>{data.summary.total}</span>

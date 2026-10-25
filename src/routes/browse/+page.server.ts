@@ -185,6 +185,7 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
     },
     filtered: filter.active,
     filterHref: `/browse/filter?${filterQuery(filter)}`,
+    backfillHref: `/browse/backfill?vehicle=${filter.vehicleIds.length === 1 ? filter.vehicleIds[0] : defaultVehicleId}`,
     settings
   };
 };

@@ -11,11 +11,15 @@
     actionHref?: string;
     actionIcon?: string;
     actionLabel?: string;
+    /** optional second link button, shown left of the main action */
+    action2Href?: string;
+    action2Icon?: string;
+    action2Label?: string;
     /** optional secondary link shown beside the save button (e.g. "AI") */
     secondaryHref?: string;
     secondaryLabel?: string;
   }
-  let { title, save = false, onsave, backHref = '/', formId, actionHref, actionIcon, actionLabel, secondaryHref, secondaryLabel }: Props = $props();
+  let { title, save = false, onsave, backHref = '/', formId, actionHref, actionIcon, actionLabel, action2Href, action2Icon, action2Label, secondaryHref, secondaryLabel }: Props = $props();
 </script>
 
 <style>
@@ -40,7 +44,12 @@
   {:else if save}
     <button class="icon-btn" onclick={onsave} aria-label="Save">{@html floppyIcon}</button>
   {:else if actionHref}
-    <a class="icon-btn" href={actionHref} aria-label={actionLabel ?? 'Action'}>{@html actionIcon ?? ''}</a>
+    <span class="header-actions">
+      {#if action2Href}
+        <a class="icon-btn" href={action2Href} aria-label={action2Label ?? 'Action'}>{@html action2Icon ?? ''}</a>
+      {/if}
+      <a class="icon-btn" href={actionHref} aria-label={actionLabel ?? 'Action'}>{@html actionIcon ?? ''}</a>
+    </span>
   {:else}
     <div class="header-spacer"></div>
   {/if}
