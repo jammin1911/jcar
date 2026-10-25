@@ -52,6 +52,6 @@ export const actions: Actions = {
       await storePhotos(id, processed.buffers, tx);
       await bumpVehicle(tx, page.vehicleId);
     });
-    throw redirect(303, '/');
+    throw redirect(303, editId ? '/browse' : '/');
   }
 };
