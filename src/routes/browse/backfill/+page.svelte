@@ -156,6 +156,11 @@
 
   <div class="sect">How far back</div>
 
+  <label class="fld">
+    <span>End date (most recent)</span>
+    <input type="date" name="end" value={values.end} />
+  </label>
+
   <label class="range-row">
     <input type="radio" name="range" value="count" checked={values.range === 'count'} />
     <span>Number of payments</span>
@@ -164,14 +169,14 @@
 
   <label class="range-row">
     <input type="radio" name="range" value="date" checked={values.range === 'date'} />
-    <span>Back to a date</span>
+    <span>Start date</span>
     <input type="date" name="until" value={values.until} class="range-date" />
   </label>
 
   <label class="range-row">
     <input type="radio" name="range" value="purchase" checked={values.range === 'purchase'} disabled={!data.purchasedDate} />
     <span>
-      Back to purchase date
+      Purchase date
       {#if data.purchasedDate}
         <small>({data.purchasedLabel})</small>
       {:else}

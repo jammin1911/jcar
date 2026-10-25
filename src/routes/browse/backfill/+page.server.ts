@@ -42,6 +42,8 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   // Defaults ride in on the query string so cancelling the confirm
   // popup lands back on the form the way it was filled in.
   const q = url.searchParams;
+  const t = todayYMD();
+  const todayStr = `${t.y}-${String(t.m).padStart(2, '0')}-${String(t.d).padStart(2, '0')}`;
   const defaults = {
     type: q.get('type') ?? 'expense',
     title: q.get('title') ?? '',
@@ -55,7 +57,8 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
     month: q.get('month') ?? '1',
     range: q.get('range') ?? 'count',
     count: q.get('count') ?? '12',
-    until: q.get('until') ?? ''
+    until: q.get('until') ?? '',
+    end: q.get('end') ?? todayStr
   };
 
   const purchasedDate = chosen.vehicle.purchasedDate ?? '';
@@ -109,7 +112,9 @@ async function resolveRun(userId: number, data: FormData): Promise<Run | { error
     }
   }
 
-  const dates = backfillDates(parsed.spec, start, todayYMD());
+  const end = parseYMD(parsed.spec.end);
+  if (!end) return { error: 'Pick a valid end date.' };
+  const dates = backfillDates(parsed.spec, start, end);
   if (!dates.length) return { error: 'That schedule makes no records in the range picked.' };
   if (dates.length > BACKFILL_CAP) {
     return {

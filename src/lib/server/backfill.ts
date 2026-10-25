@@ -4,8 +4,7 @@ import type { Exec } from './versions';
 
 // Bulk create the same service or expense record on a repeating
 // schedule going backwards - insurance payments and the like that
-// were never entered one by one. The newest record is the latest
-// scheduled date on or before today, the rest step back from there.
+// were never entered one by one.
 
 export const BACKFILL_CAP = 1000;
 
@@ -25,7 +24,8 @@ export interface BackfillSpec {
   month: number; // yearly, 1..12
   range: BackfillRange;
   count: number; // range = count
-  until: string; // range = date, YYYY-MM-DD
+  until: string; // range = date, the start date, YYYY-MM-DD
+  end: string; // the newest date in the window, YYYY-MM-DD
 }
 
 export interface YMD {
@@ -63,27 +63,28 @@ const monthStep = (a: YMD, n: number): YMD => {
 };
 
 /**
- * The scheduled dates, oldest first. Count mode stops after count
- * dates, the other modes stop before start (start itself counts).
- * The list can come back one past BACKFILL_CAP, the caller treats
- * that as over the limit.
+ * The scheduled dates, oldest first. The newest is the latest
+ * scheduled date on or before end, the rest step back from there.
+ * Count mode stops after count dates, the other modes stop before
+ * start (start itself counts). The list can come back one past
+ * BACKFILL_CAP, the caller treats that as over the limit.
  */
-export function backfillDates(spec: BackfillSpec, start: YMD | null, today: YMD): YMD[] {
+export function backfillDates(spec: BackfillSpec, start: YMD | null, end: YMD): YMD[] {
   let cand: YMD;
   if (spec.freq === 'daily') {
-    cand = today;
+    cand = end;
   } else if (spec.freq === 'weekly') {
-    const dow = new Date(today.y, today.m - 1, today.d).getDay();
-    cand = addDays(today, -((dow - spec.dayOfWeek + 7) % 7));
+    const dow = new Date(end.y, end.m - 1, end.d).getDay();
+    cand = addDays(end, -((dow - spec.dayOfWeek + 7) % 7));
   } else if (spec.freq === 'monthly') {
-    cand = clampDay(today.y, today.m, spec.dayOfMonth);
-    if (cmpYMD(cand, today) > 0) {
+    cand = clampDay(end.y, end.m, spec.dayOfMonth);
+    if (cmpYMD(cand, end) > 0) {
       const b = monthStep(cand, -spec.every);
       cand = clampDay(b.y, b.m, spec.dayOfMonth);
     }
   } else {
-    cand = clampDay(today.y, spec.month, spec.dayOfMonth);
-    if (cmpYMD(cand, today) > 0) cand = clampDay(today.y - spec.every, spec.month, spec.dayOfMonth);
+    cand = clampDay(end.y, spec.month, spec.dayOfMonth);
+    if (cmpYMD(cand, end) > 0) cand = clampDay(end.y - spec.every, spec.month, spec.dayOfMonth);
   }
 
   const out: YMD[] = [];
@@ -118,7 +119,8 @@ const FIELDS = [
   'month',
   'range',
   'count',
-  'until'
+  'until',
+  'end'
 ] as const;
 
 export type BackfillValues = Record<(typeof FIELDS)[number], string>;
@@ -181,7 +183,12 @@ export function readBackfillForm(
   }
 
   const until = String(data.get('until') ?? '');
-  if (range === 'date' && !parseYMD(until)) return { error: 'Pick a valid back-to date.' };
+  if (range === 'date' && !parseYMD(until)) return { error: 'Pick a valid start date.' };
+
+  const end = String(data.get('end') ?? '');
+  const endYMD = parseYMD(end);
+  if (!endYMD) return { error: 'Pick a valid end date.' };
+  if (cmpYMD(endYMD, todayYMD()) > 0) return { error: "End date can't be in the future." };
 
   return {
     vehicleId,
@@ -198,7 +205,8 @@ export function readBackfillForm(
       month: month ?? 1,
       range,
       count: count ?? 12,
-      until
+      until,
+      end
     }
   };
 }
