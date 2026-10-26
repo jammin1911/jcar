@@ -17,6 +17,10 @@ export interface BackfillSpec {
   totalCost: number;
   notes: string;
   locationId: number | null;
+  mode: 'time' | 'distance';
+  // distance mode, canonical km (converted from the user's unit as the form is read)
+  intervalKm: number;
+  startOdometerKm: number;
   freq: BackfillFreq;
   every: number;
   dayOfWeek: number; // weekly, 0 = Sunday
@@ -107,6 +111,9 @@ export function backfillDates(spec: BackfillSpec, start: YMD | null, end: YMD): 
 export const backfillISO = (d: YMD) => new Date(d.y, d.m - 1, d.d, 12).toISOString();
 
 const FIELDS = [
+  'mode',
+  'interval',
+  'startOdometer',
   'type',
   'title',
   'totalCost',
@@ -138,6 +145,71 @@ const intField = (v: FormDataEntryValue | null, min: number, max: number): numbe
 };
 
 export function readBackfillForm(
+  data: FormData,
+  distFactor = 1
+): { vehicleId: number; spec: BackfillSpec } | { error: string } {
+  return String(data.get('mode') ?? 'time') === 'distance'
+    ? readDistanceForm(data, distFactor)
+    : readTimeForm(data);
+}
+
+function readDistanceForm(
+  data: FormData,
+  distFactor: number
+): { vehicleId: number; spec: BackfillSpec } | { error: string } {
+  const vehicleId = Number(data.get('vehicleId')) || 0;
+  if (!vehicleId) return { error: 'Pick a vehicle.' };
+
+  const type = String(data.get('type') ?? '');
+  if (type !== 'service' && type !== 'expense') return { error: 'Pick a record type.' };
+
+  const title = String(data.get('title') ?? '').trim();
+  if (!title) return { error: 'Enter a title, like Oil Change.' };
+
+  const totalCost = numOrNull(data.get('totalCost'));
+  if (totalCost == null) return { error: 'Enter an amount for each record.' };
+  if (totalCost < 0) return { error: "Amount can't be negative." };
+
+  const intervalRaw = numOrNull(data.get('interval'));
+  if (intervalRaw == null || intervalRaw < 1) return { error: 'Enter an interval of at least 1.' };
+
+  const startOdoRaw = numOrNull(data.get('startOdometer'));
+  if (startOdoRaw == null) return { error: 'Enter a starting odometer.' };
+  if (startOdoRaw < 0) return { error: "Starting odometer can't be negative." };
+
+  const until = String(data.get('until') ?? '');
+  if (!parseYMD(until)) return { error: 'Pick a valid start date.' };
+
+  const end = String(data.get('end') ?? '');
+  const endYMD = parseYMD(end);
+  if (!endYMD) return { error: 'Pick a valid end date.' };
+  if (cmpYMD(endYMD, todayYMD()) > 0) return { error: "End date can't be in the future." };
+
+  return {
+    vehicleId,
+    spec: {
+      type,
+      title,
+      totalCost,
+      notes: String(data.get('notes') ?? '').trim(),
+      locationId: numOrNull(data.get('locationId')),
+      mode: 'distance',
+      intervalKm: intervalRaw * distFactor,
+      startOdometerKm: startOdoRaw * distFactor,
+      freq: 'monthly',
+      every: 1,
+      dayOfWeek: 1,
+      dayOfMonth: 1,
+      month: 1,
+      range: 'date',
+      count: 12,
+      until,
+      end
+    }
+  };
+}
+
+function readTimeForm(
   data: FormData
 ): { vehicleId: number; spec: BackfillSpec } | { error: string } {
   const vehicleId = Number(data.get('vehicleId')) || 0;
@@ -198,6 +270,9 @@ export function readBackfillForm(
       totalCost,
       notes: String(data.get('notes') ?? '').trim(),
       locationId: numOrNull(data.get('locationId')),
+      mode: 'time',
+      intervalKm: 0,
+      startOdometerKm: 0,
       freq,
       every,
       dayOfWeek: dayOfWeek ?? 1,
@@ -211,23 +286,82 @@ export function readBackfillForm(
   };
 }
 
-/** Insert one record per date, all inside the caller's transaction. */
+/** One point on a vehicle's odometer timeline, ms epoch and km. */
+export interface BackfillPoint {
+  t: number;
+  odo: number;
+}
+
+/** One record to create: when, and the odometer it carries (time mode carries none). */
+export interface BackfillSlot {
+  iso: string;
+  odometer: number | null;
+}
+
+/**
+ * Date each interval reading against the vehicle's own odometer
+ * timeline. The timeline is read as a rising envelope, the earliest
+ * moment at each new high, and a target between two points splits
+ * the time between them by the odometer fraction. Targets with no
+ * point at or below them cannot be dated and are skipped, targets
+ * past the last known reading end the run. Records sit at noon on
+ * the interpolated day, like the time mode ones.
+ */
+export function backfillDistance(
+  spec: BackfillSpec,
+  points: BackfillPoint[],
+  start: YMD,
+  end: YMD
+): BackfillSlot[] {
+  const sorted = [...points].sort((a, b) => a.t - b.t);
+  const env: BackfillPoint[] = [];
+  for (const p of sorted) {
+    if (!env.length || p.odo > env[env.length - 1].odo) env.push(p);
+  }
+  if (!env.length) return [];
+
+  const startMs = new Date(start.y, start.m - 1, start.d).getTime();
+  const endMs = new Date(end.y, end.m - 1, end.d, 23, 59, 59, 999).getTime();
+  const out: BackfillSlot[] = [];
+  for (let n = 0; ; n++) {
+    const target = Math.round((spec.startOdometerKm + n * spec.intervalKm) * 10) / 10;
+    const ni = env.findIndex((p) => p.odo >= target);
+    if (ni === -1) break; // past the last known reading
+    const next = env[ni];
+    const prev = ni > 0 ? env[ni - 1] : null;
+    let t: number;
+    if (next.odo === target) t = next.t;
+    else if (!prev) continue; // nothing at or below this target to date it against
+    else t = prev.t + ((target - prev.odo) / (next.odo - prev.odo)) * (next.t - prev.t);
+    if (t < startMs) continue;
+    if (t > endMs) break;
+    const d = new Date(t);
+    out.push({
+      iso: backfillISO({ y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() }),
+      odometer: target
+    });
+    if (out.length > BACKFILL_CAP) break;
+  }
+  return out;
+}
+
+/** Insert one record per slot, all inside the caller's transaction. */
 export async function createBackfillRecords(
   userId: number,
   vehicleId: number,
   spec: BackfillSpec,
-  dates: YMD[],
+  slots: BackfillSlot[],
   exec: Exec
 ): Promise<void> {
   const createdAt = new Date().toISOString();
-  for (const d of dates) {
+  for (const s of slots) {
     await exec.insert(records).values({
       vehicleId,
       userId,
       type: spec.type,
       title: spec.title,
-      datetime: backfillISO(d),
-      odometer: null,
+      datetime: s.iso,
+      odometer: s.odometer,
       pricePerUnit: null,
       volume: null,
       totalCost: spec.totalCost,

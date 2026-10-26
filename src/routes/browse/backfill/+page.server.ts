@@ -3,17 +3,21 @@ import type { Actions, PageServerLoad } from './$types';
 import { and, eq } from 'drizzle-orm';
 import { db, locations, records } from '$lib/server/db';
 import { getSelectedVehicle, getSettings, getUserVehicles, getVehicleAccess } from '$lib/server/vehicles';
+import { getVehicleRecords } from '$lib/server/stats';
 import { bumpVehicle } from '$lib/server/versions';
-import { fmtDate, fmtDateTime, fmtMoney } from '$lib/format';
+import { distLabel, distValue, fmtDate, fmtDateTime, fmtMoney, fmtNum } from '$lib/format';
 import {
   BACKFILL_CAP,
   backfillDates,
+  backfillDistance,
   backfillISO,
   createBackfillRecords,
   echoBackfillValues,
   parseYMD,
   readBackfillForm,
   todayYMD,
+  type BackfillPoint,
+  type BackfillSlot,
   type BackfillSpec,
   type YMD
 } from '$lib/server/backfill';
@@ -45,6 +49,9 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   const t = todayYMD();
   const todayStr = `${t.y}-${String(t.m).padStart(2, '0')}-${String(t.d).padStart(2, '0')}`;
   const defaults = {
+    mode: q.get('mode') ?? 'time',
+    interval: q.get('interval') ?? '',
+    startOdometer: q.get('startOdometer') ?? '',
     type: q.get('type') ?? 'expense',
     title: q.get('title') ?? '',
     totalCost: q.get('totalCost') ?? '',
@@ -62,10 +69,15 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   };
 
   const purchasedDate = chosen.vehicle.purchasedDate ?? '';
+  const purchasedOdometer = chosen.vehicle.purchasedOdometer ?? null;
   return {
     vehicles: accessible.map((a) => ({ id: a.vehicle.id, name: a.vehicle.name })),
     vehicleId: chosen.vehicle.id,
     vehicleName: chosen.vehicle.name,
+    distUnit: distLabel(settings),
+    costTracking: chosen.vehicle.costTracking === 1,
+    purchasedOdometerDisplay:
+      purchasedOdometer != null ? String(Math.round(distValue(purchasedOdometer, settings) * 100) / 100) : '',
     purchasedDate,
     purchasedLabel: purchasedDate ? fmtDate(`${purchasedDate}T12:00:00.000Z`, settings) : '',
     titles,
@@ -81,12 +93,13 @@ interface Run {
   vehicleId: number;
   vehicleName: string;
   spec: BackfillSpec;
-  dates: YMD[];
+  slots: BackfillSlot[];
 }
 
-/** Parse the form, check access, and work out the exact date list. */
+/** Parse the form, check access, and work out the exact record list. */
 async function resolveRun(userId: number, data: FormData): Promise<Run | { error: string }> {
-  const parsed = readBackfillForm(data);
+  const settings = await getSettings(userId);
+  const parsed = readBackfillForm(data, settings.distanceUnit === 'Miles' ? 1.60934 : 1);
   if ('error' in parsed) return parsed;
 
   const access = await getVehicleAccess(userId, parsed.vehicleId);
@@ -100,28 +113,52 @@ async function resolveRun(userId: number, data: FormData): Promise<Run | { error
     if (!rows.length) return { error: 'Pick one of your locations.' };
   }
 
-  let start: YMD | null = null;
-  if (parsed.spec.range === 'date') {
-    start = parseYMD(parsed.spec.until);
-  } else if (parsed.spec.range === 'purchase') {
-    start = parseYMD(access.vehicle.purchasedDate ?? '');
-    if (!start) {
-      return {
-        error: `${access.vehicle.name} has no purchase date set. Add one in Vehicle Details, or pick a different way back.`
-      };
-    }
-  }
-
   const end = parseYMD(parsed.spec.end);
   if (!end) return { error: 'Pick a valid end date.' };
-  const dates = backfillDates(parsed.spec, start, end);
-  if (!dates.length) return { error: 'That schedule makes no records in the range picked.' };
-  if (dates.length > BACKFILL_CAP) {
+
+  let slots: BackfillSlot[];
+  if (parsed.spec.mode === 'distance') {
+    if (access.vehicle.costTracking === 1) {
+      return { error: 'Odometer backfill needs a vehicle with an odometer history, and this one is cost tracking only.' };
+    }
+    const start = parseYMD(parsed.spec.until);
+    if (!start) return { error: 'Pick a valid start date.' };
+    // The purchase point anchors the timeline when both halves are set,
+    // then every record with an odometer adds a point.
+    const points: BackfillPoint[] = [];
+    const po = access.vehicle.purchasedOdometer ?? null;
+    const pd = parseYMD(access.vehicle.purchasedDate ?? '');
+    if (po != null && pd) points.push({ t: new Date(pd.y, pd.m - 1, pd.d, 12).getTime(), odo: po });
+    const recs = await getVehicleRecords(parsed.vehicleId);
+    for (const r of recs) {
+      if (r.odometer != null) points.push({ t: new Date(r.datetime).getTime(), odo: r.odometer });
+    }
+    if (!points.length) {
+      return { error: 'This vehicle has no records with odometers to date a backfill against.' };
+    }
+    slots = backfillDistance(parsed.spec, points, start, end);
+  } else {
+    let start: YMD | null = null;
+    if (parsed.spec.range === 'date') {
+      start = parseYMD(parsed.spec.until);
+    } else if (parsed.spec.range === 'purchase') {
+      start = parseYMD(access.vehicle.purchasedDate ?? '');
+      if (!start) {
+        return {
+          error: `${access.vehicle.name} has no purchase date set. Add one in Vehicle Details, or pick a different way back.`
+        };
+      }
+    }
+    slots = backfillDates(parsed.spec, start, end).map((d) => ({ iso: backfillISO(d), odometer: null }));
+  }
+
+  if (!slots.length) return { error: 'That schedule makes no records in the range picked.' };
+  if (slots.length > BACKFILL_CAP) {
     return {
       error: `That would create more than the ${BACKFILL_CAP} record limit. Narrow the range or repeat less often.`
     };
   }
-  return { vehicleId: parsed.vehicleId, vehicleName: access.vehicle.name, spec: parsed.spec, dates };
+  return { vehicleId: parsed.vehicleId, vehicleName: access.vehicle.name, spec: parsed.spec, slots };
 }
 
 export const actions: Actions = {
@@ -134,17 +171,26 @@ export const actions: Actions = {
     const run = await resolveRun(user.id, data);
     if ('error' in run) return fail(400, { error: run.error, values });
     const settings = await getSettings(user.id);
+    // Distance mode lists the readings it will create, first and
+    // last few when there are a lot of them.
+    const shown =
+      run.slots.length <= 6 ? run.slots : [...run.slots.slice(0, 3), ...run.slots.slice(-3)];
     return {
       values,
       preview: {
-        count: run.dates.length,
+        count: run.slots.length,
         vehicleName: run.vehicleName,
         typeLabel: run.spec.type === 'service' ? 'Service' : 'Expense',
         title: run.spec.title,
         each: fmtMoney(run.spec.totalCost),
-        total: fmtMoney(run.spec.totalCost * run.dates.length),
-        first: fmtDateTime(backfillISO(run.dates[0]), settings),
-        last: fmtDateTime(backfillISO(run.dates[run.dates.length - 1]), settings)
+        total: fmtMoney(run.spec.totalCost * run.slots.length),
+        first: fmtDateTime(run.slots[0].iso, settings),
+        last: fmtDateTime(run.slots[run.slots.length - 1].iso, settings),
+        lines:
+          run.spec.mode === 'distance'
+            ? shown.map((s) => `${fmtDate(s.iso, settings)} - ${fmtNum(s.odometer ?? 0)}${distLabel(settings)}`)
+            : [],
+        moreCount: run.spec.mode === 'distance' ? run.slots.length - shown.length : 0
       }
     };
   },
@@ -159,7 +205,7 @@ export const actions: Actions = {
     // The records and the version bump land together, same rule as
     // the single record forms.
     await db.transaction(async (tx) => {
-      await createBackfillRecords(user.id, run.vehicleId, run.spec, run.dates, tx);
+      await createBackfillRecords(user.id, run.vehicleId, run.spec, run.slots, tx);
       await bumpVehicle(tx, run.vehicleId);
     });
     cookies.set('jcar_vehicle', String(run.vehicleId), { path: '/', maxAge: 60 * 60 * 24 * 365 });

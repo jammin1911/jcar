@@ -5,6 +5,7 @@
 
   const values = form?.values ?? data.defaults;
   let freq = $state(values.freq);
+  let mode = $state(values.mode || 'time');
 
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const months = [
@@ -83,6 +84,15 @@
   <div class="sect">Repeats</div>
 
   <label class="fld">
+    <span>Repeat by</span>
+    <select name="mode" bind:value={mode}>
+      <option value="time">Time</option>
+      <option value="distance">Odometer</option>
+    </select>
+  </label>
+
+  {#if mode === 'time'}
+  <label class="fld">
     <span>Frequency</span>
     <select name="freq" bind:value={freq}>
       <option value="daily">Daily</option>
@@ -153,6 +163,28 @@
   {#if freq === 'yearly'}
     <input type="hidden" name="dayOfWeek" value={values.dayOfWeek} />
   {/if}
+  <input type="hidden" name="interval" value={values.interval} />
+  <input type="hidden" name="startOdometer" value={values.startOdometer} />
+  {/if}
+
+  {#if mode === 'distance'}
+    <label class="fld">
+      <span>Interval ({data.distUnit})</span>
+      <input type="number" name="interval" value={values.interval} min="1" step="any" inputmode="decimal" placeholder="8000" />
+    </label>
+    <label class="fld">
+      <span>Starting odometer ({data.distUnit})</span>
+      <input type="number" name="startOdometer" value={values.startOdometer || data.purchasedOdometerDisplay} min="0" step="any" inputmode="decimal" />
+    </label>
+    {#if data.costTracking}
+      <p class="note">This vehicle is cost tracking only, so it has no odometer history to backfill against.</p>
+    {/if}
+    <input type="hidden" name="freq" value={values.freq} />
+    <input type="hidden" name="every" value={values.every} />
+    <input type="hidden" name="dayOfWeek" value={values.dayOfWeek} />
+    <input type="hidden" name="dayOfMonth" value={values.dayOfMonth} />
+    <input type="hidden" name="month" value={values.month} />
+  {/if}
 
   <div class="sect">How far back</div>
 
@@ -161,6 +193,7 @@
     <input type="date" name="end" value={values.end} />
   </label>
 
+  {#if mode === 'time'}
   <label class="range-row">
     <input type="radio" name="range" value="count" checked={values.range === 'count'} />
     <span>Number of payments</span>
@@ -184,6 +217,13 @@
       {/if}
     </span>
   </label>
+  {:else}
+    <label class="fld">
+      <span>Start date</span>
+      <input type="date" name="until" value={values.until || data.purchasedDate} />
+    </label>
+    <input type="hidden" name="range" value="date" />
+  {/if}
 
   <button type="submit" class="btn primary">Continue</button>
 </form>
@@ -196,6 +236,16 @@
         {form.preview.title} at {form.preview.each} each, on {form.preview.vehicleName}.
       </p>
       <p class="dlg-line">{form.preview.first} to {form.preview.last}</p>
+      {#if form.preview.lines.length}
+        <ul class="dlg-slots">
+          {#each form.preview.lines as l}
+            <li>{l}</li>
+          {/each}
+        </ul>
+        {#if form.preview.moreCount}
+          <p class="dlg-line">... and {form.preview.moreCount} more</p>
+        {/if}
+      {/if}
       <p class="dlg-total">Total added: {form.preview.total}</p>
       <form method="POST" action="?/create">
         {#each Object.entries(values) as [k, v]}
@@ -248,6 +298,9 @@
   }
   .dlg-title { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
   .dlg-line { margin: 0 0 6px; font-size: 15px; }
+  .dlg-slots { margin: 2px 0 8px; padding-left: 20px; font-size: 15px; }
+  .dlg-slots li { margin-bottom: 2px; }
+  .note { margin: 0; font-size: 14px; color: var(--grey); }
   .dlg-total { margin: 10px 0 16px; font-size: 16px; font-weight: 800; }
   .dlg-btns { display: flex; gap: 10px; justify-content: flex-end; }
 </style>
