@@ -70,6 +70,24 @@
     syncPhotoInput();
   }
 
+  // the service and expense notes box grows to fit the whole note
+  // so nothing hides behind a scrollbar, it sizes once on load and
+  // again on every input
+  function autoGrow(node: HTMLTextAreaElement) {
+    const resize = () => {
+      node.style.height = 'auto';
+      node.style.height = `${node.scrollHeight + 2}px`;
+    };
+    resize();
+    requestAnimationFrame(resize);
+    node.addEventListener('input', resize);
+    return {
+      destroy() {
+        node.removeEventListener('input', resize);
+      }
+    };
+  }
+
   // the fuel numbers are live linked: on every keystroke one of
   // price, volume and total is calculated from the other two. the
   // calculated field is the empty one when there is exactly one, and
@@ -193,10 +211,6 @@
       <label for="cost">Total Cost</label>
       <div class="field"><input id="cost" name="totalCost" type="number" step="any" inputmode="decimal" placeholder="----------" value={values?.totalCost ?? ''} /></div>
     </div>
-    <div class="form-row notes-row">
-      <label for="notes">{notesLabel}</label>
-      <div class="field"><textarea id="notes" name="notes" rows="3" placeholder="----------">{values?.notes ?? ''}</textarea></div>
-    </div>
   {/if}
 
   <div class="form-row">
@@ -215,6 +229,13 @@
     <label for="dt">Date/Time</label>
     <div class="field"><input id="dt" name="datetime" type="datetime-local" value={values?.datetime ?? defaultDateTime} /></div>
   </div>
+
+  {#if kind !== 'fuel'}
+    <div class="notes-block">
+      <label for="notes">{notesLabel}</label>
+      <textarea id="notes" name="notes" rows="4" placeholder="----------" use:autoGrow>{values?.notes ?? ''}</textarea>
+    </div>
+  {/if}
 
   <div class="form-section">Photos</div>
   <div class="attach-row">

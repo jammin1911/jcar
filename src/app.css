@@ -290,6 +290,26 @@ main { flex: 1; }
 .form-row input:focus, .form-row select:focus, .form-row textarea:focus { outline: none; border-bottom: 2px solid var(--teal); }
 .notes-row { align-items: flex-start; }
 .notes-row label { padding-top: 6px; }
+/* service and expense notes sit full width under the date so a
+   long note reads in full, the box grows with the text */
+.notes-block { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--line); }
+.notes-block label { display: block; font-weight: 700; font-size: 17px; }
+.notes-block textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid #bbb;
+  background: transparent;
+  font-size: 16.5px;
+  line-height: 1.4;
+  padding: 8px 2px 6px;
+  color: var(--ink);
+  font-family: inherit;
+  resize: none;
+  overflow: hidden;
+  min-height: 100px;
+}
+.notes-block textarea:focus { outline: none; border-bottom: 2px solid var(--teal); }
 .readonly-line {
   border-bottom: 1px solid transparent;
   font-size: 16.5px;
@@ -525,6 +545,7 @@ main { flex: 1; }
 .phone[data-theme="dark"] .form-row input[type="datetime-local"],
 .phone[data-theme="dark"] .form-row select,
 .phone[data-theme="dark"] .form-row textarea { border-bottom-color: #4a4f57; }
+.phone[data-theme="dark"] .notes-block textarea { border-bottom-color: #4a4f57; }
 .phone[data-theme="dark"] .attach-square { background: #2a2e34; }
 .phone[data-theme="dark"] .attach-square svg { opacity: 0.9; filter: brightness(2); }
 .phone[data-theme="dark"] .rec-row.alt { background: #1a1d21; }
