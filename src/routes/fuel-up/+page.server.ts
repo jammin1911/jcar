@@ -12,6 +12,20 @@ import {
 import { db } from '$lib/server/db';
 import { bumpVehicle } from '$lib/server/versions';
 import { extractPhotoFiles, checkPhotoSizes, processPhotoBuffers, storePhotos } from '$lib/server/photos';
+import { setFlash } from '$lib/server/flash';
+import { getVehicleRecords, fuelCalcs } from '$lib/server/stats';
+import { effValue, effUnitLabel, type DisplaySettings } from '$lib/format';
+
+// The pop-up's second line - the economy of the tank this fill just
+// closed, in the users own unit. Null when the fill closes no
+// measurable tank (first fill, a partial fill, a missed fill in
+// between), the same fills Browse shows a dash for.
+async function lastTankLine(vehicleId: number, recordId: number, settings: DisplaySettings): Promise<string | null> {
+  const calc = fuelCalcs(await getVehicleRecords(vehicleId, null)).find((c) => c.id === recordId);
+  if (!calc || calc.per100 == null) return null;
+  const unit = effUnitLabel(settings) === 'MPG' ? 'MPG' : 'L/100km';
+  return `Last ${unit}: ${effValue(calc.per100, settings).toFixed(1)}`;
+}
 
 export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   const page = await loadRecordPage(locals, cookies, url, 'fuel');
@@ -66,12 +80,14 @@ export const actions: Actions = {
     // The write, its photos and the version bump land together, so a
     // version can never describe data that is not there yet (or miss
     // data that is).
+    let savedId = editId;
     await db.transaction(async (tx) => {
-      const id = editId || (await insertRecord(user.id, page.vehicleId, input, tx));
+      savedId = editId || (await insertRecord(user.id, page.vehicleId, input, tx));
       if (editId) await updateRecord(editId, input, tx);
-      await storePhotos(id, processed.buffers, tx);
+      await storePhotos(savedId, processed.buffers, tx);
       await bumpVehicle(tx, page.vehicleId);
     });
+    setFlash(cookies, 'fuel', await lastTankLine(page.vehicleId, savedId, page.settings));
     throw redirect(303, editId ? '/browse' : '/');
   }
 };

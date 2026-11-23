@@ -6,9 +6,13 @@ import { bumpUsers, bumpVehicle, vehicleAudience } from '$lib/server/versions';
 import { getUserVehicles, VEHICLE_COOKIE } from '$lib/server/vehicles';
 import { getUserIdentity } from '$lib/server/users';
 import { DEMO_MODE } from '$lib/server/demo';
+import { takeFlash } from '$lib/server/flash';
 
 export const load: PageServerLoad = async ({ locals, cookies }) => {
   const user = locals.user!;
+  // A record save lands here carrying a one-shot flash cookie - read
+  // and clear it before anything can redirect away from this page.
+  const flash = takeFlash(cookies);
   // The admin account has no vehicles - its home is the admin dashboard.
   if (user.isAdmin) throw redirect(303, '/admin');
   // Disabled vehicles (Manage Vehicles) never appear in the selector.
@@ -57,7 +61,8 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       costTracking: a.vehicle.costTracking === 1,
       ownerName: a.ownerName
     })),
-    selectedId: selected?.vehicle.id ?? null
+    selectedId: selected?.vehicle.id ?? null,
+    flash
   };
 };
 

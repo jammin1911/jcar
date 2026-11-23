@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { icons, iconsDark, dotsIcon } from '$lib/icons';
+  import SaveToast from '$lib/components/SaveToast.svelte';
 
   let { data } = $props();
 
@@ -111,6 +112,10 @@
     { label: 'Sharing', href: '/sharing', icon: ic.sharing, plus: false, dot: data.pendingInvites > 0 }
   ];
 </script>
+
+{#if data.flash}
+  <SaveToast message={data.flash.message} detail={data.flash.detail} />
+{/if}
 
 <header class="app-header">
   <div class="logo-slot"><img src="/logo-sm.png" alt="jCar" class="logo-img" /></div>

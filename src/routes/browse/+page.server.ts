@@ -7,9 +7,12 @@ import { getVehicleRecords, fuelCalcs, fuelSegments } from '$lib/server/stats';
 import { parseBrowseFilter, rangeWindow, filterQuery } from '$lib/server/browseFilter';
 import { retentionCutoff } from '$lib/server/plans';
 import { fmtDateTime, fmtMoney, fmtNum, effValue, effUnitLabel, volValue, volLabel, distLabel } from '$lib/format';
+import { takeFlash } from '$lib/server/flash';
 
 export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   const user = locals.user!;
+  // Edit saves land here carrying the one-shot flash cookie.
+  const flash = takeFlash(cookies);
   const accessible = await getUserVehicles(user.id);
   if (!accessible.length) throw redirect(303, '/vehicle/new');
   const settings = await getSettings(user.id);
@@ -186,6 +189,7 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
     filtered: filter.active,
     filterHref: `/browse/filter?${filterQuery(filter)}`,
     backfillHref: `/browse/backfill?vehicle=${filter.vehicleIds.length === 1 ? filter.vehicleIds[0] : defaultVehicleId}`,
-    settings
+    settings,
+    flash
   };
 };

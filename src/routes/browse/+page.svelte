@@ -1,5 +1,6 @@
 <script lang="ts">
   import SubHeader from '$lib/components/SubHeader.svelte';
+  import SaveToast from '$lib/components/SaveToast.svelte';
   import { icons, iconsDark, pumpIcon, filterIcon, backfillIcon } from '$lib/icons';
 
   // All four entry types (fuel-up, service, expense, note) live in the
@@ -17,6 +18,10 @@
 </script>
 
 <SubHeader title="Browse Records" actionHref={data.filterHref} actionIcon={filterIcon} actionLabel="Filter records" action2Href={data.backfillHref} action2Icon={backfillIcon} action2Label="Backfill records" />
+
+{#if data.flash}
+  <SaveToast message={data.flash.message} detail={data.flash.detail} />
+{/if}
 
 <div class="summary-bar">
   <span>{data.summary.total}</span>

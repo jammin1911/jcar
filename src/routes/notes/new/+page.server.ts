@@ -12,6 +12,7 @@ import {
 import { db } from '$lib/server/db';
 import { bumpVehicle } from '$lib/server/versions';
 import { extractPhotoFiles, checkPhotoSizes, processPhotoBuffers, storePhotos } from '$lib/server/photos';
+import { setFlash } from '$lib/server/flash';
 
 export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   return loadRecordPage(locals, cookies, url, 'note');
@@ -52,6 +53,7 @@ export const actions: Actions = {
       await storePhotos(id, processed.buffers, tx);
       await bumpVehicle(tx, page.vehicleId);
     });
+    setFlash(cookies, 'note');
     throw redirect(303, editId ? '/browse' : '/');
   }
 };

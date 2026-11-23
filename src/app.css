@@ -310,6 +310,45 @@ main { flex: 1; }
   min-height: 100px;
 }
 .notes-block textarea:focus { outline: none; border-bottom: 2px solid var(--teal); }
+/* the saved pop-up floats over the top of the page, the layout under
+   it never moves, and it fades out on its own after a few seconds */
+.save-toast {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  width: max-content;
+  max-width: calc(100vw - 48px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: #d7f0dd;
+  border: 1px solid #7bc796;
+  color: #14532d;
+  font-size: 15.5px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  animation: save-toast-life 3.4s ease forwards;
+}
+.save-toast-detail { font-weight: 500; }
+@keyframes save-toast-life {
+  0% { opacity: 0; }
+  7% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+.phone[data-theme="dark"] .save-toast {
+  background: #1e4029;
+  border-color: #2f6b45;
+  color: #a9e5bc;
+}
 .readonly-line {
   border-bottom: 1px solid transparent;
   font-size: 16.5px;
