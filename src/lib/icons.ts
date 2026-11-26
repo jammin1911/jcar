@@ -82,7 +82,7 @@ export const iconsDark: Partial<Record<keyof typeof icons, string>> = {};
 // paused and only lets it play when the tile carries the ringing
 // class, so a still clock means nothing is due.
 export function remindersIcon(ringing: boolean): string {
-  return `<svg class="jc-alarm${ringing ? ' ringing' : ''}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1250 1250" role="img" aria-label="Reminders">
+  return `<svg class="jc-alarm${ringing ? ' ringing' : ''}" xmlns="http://www.w3.org/2000/svg" viewBox="201 201 848 848" role="img" aria-label="Reminders">
   <style>
     .jc-alarm .jca-red { fill:var(--jca-body); }
     .jc-alarm .jca-metal { fill:var(--jca-metal); }
@@ -92,8 +92,8 @@ export function remindersIcon(ringing: boolean): string {
     .jc-alarm .jca-ink { stroke:var(--jca-ink); stroke-linecap:round; fill:none; }
     .jc-alarm .jca-stem { stroke:var(--jca-metal); stroke-width:30; fill:none; }
     .jc-alarm .jca-shine { fill:var(--jca-shine); }
-    .jc-alarm .jca-ring { transform-box:view-box; transform-origin:626px 1000px; animation:jcaRing 2s ease-in-out infinite; }
-    .jc-alarm .jca-bell { transform-box:view-box; transform-origin:440px 395px; animation:jcaBell 2s ease-in-out infinite; }
+    .jc-alarm .jca-ring { transform-box:view-box; transform-origin:425px 799px; animation:jcaRing 2s ease-in-out infinite; }
+    .jc-alarm .jca-bell { transform-box:view-box; transform-origin:239px 194px; animation:jcaBell 2s ease-in-out infinite; }
     @keyframes jcaRing {
       0%,50%,100% { transform:rotate(0); }
       5%,15%,25% { transform:rotate(-7deg); }
