@@ -58,6 +58,7 @@ Return the manufacturer recommended service interval for each of these items, fo
 ${REMINDER_ITEMS.map((i) => i.key).join(', ')}
 
 Rules:
+- The vehicle details come from the owners own records and may use informal wording or contain a small mistake. If one detail conflicts with the factory configurations for the named year, make, model and trim, answer for the closest matching factory configuration instead of returning null for everything.
 - Each value is either: an object {"km": <number or null>, "months": <number or null>} with the interval in kilometres and months (include whichever the manufacturer specifies, null for the other), the string "lifetime" if the manufacturer specifies no scheduled replacement, the string "monitor" if the vehicle system decides, or null if the item does not apply or you do not know the interval for this exact vehicle.
 - Use kilometres, not miles.
 - Do not invent intervals. Returning null is better than a wrong number.
