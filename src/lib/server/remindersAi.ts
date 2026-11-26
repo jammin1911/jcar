@@ -76,6 +76,11 @@ export async function fetchSuggestions(vehicle: VehicleRow): Promise<AiSuggestio
   const body = {
     model: REMINDERS_MODEL,
     temperature: 0,
+    // the cap matters: with no max_tokens the endpoint reserves
+    // credit for the models full output limit and refuses the call
+    // when the key cannot cover that, even though the real answer
+    // is small
+    max_tokens: 8000,
     response_format: { type: 'json_object' },
     reasoning: { effort: 'medium' },
     messages: [

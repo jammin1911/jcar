@@ -26,6 +26,10 @@ export const POST: RequestHandler = async ({ locals, cookies }) => {
     const jobId = createReminderJob(user.id, access.vehicle.id, suggestions);
     return json({ jobId });
   } catch (e) {
-    return json({ error: aiErrorMessage(e) }, { status: 502 });
+    // a 200 on purpose: the request to us worked, the AI call is
+    // what failed, and an error status here gets its body swapped
+    // out by the proxy in front of the app so the user would never
+    // see the real message
+    return json({ error: aiErrorMessage(e) });
   }
 };

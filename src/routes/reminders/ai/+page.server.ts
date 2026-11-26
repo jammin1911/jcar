@@ -44,7 +44,7 @@ export const actions: Actions = {
       const suggestions = await fetchSuggestions(access.vehicle);
       jobId = createReminderJob(user.id, access.vehicle.id, suggestions);
     } catch (e) {
-      return fail(502, { error: aiErrorMessage(e) });
+      return fail(400, { error: aiErrorMessage(e) });
     }
     throw redirect(303, `/reminders/ai/summary?job=${jobId}`);
   }
