@@ -66,17 +66,14 @@
   .sum-body { padding: 18px 16px 30px; }
   .intro { font-size: 16px; line-height: 1.55; color: #333; margin: 0 0 10px; }
   .disclaimer { font-size: 14px; line-height: 1.5; color: #777; margin: 0 0 18px; }
-  .sugg-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 11px 2px; border-top: 1px solid #eee;
-  }
+  .sugg-row { padding: 11px 2px; border-top: 1px solid #eee; }
   .sugg-row.info { color: #888; }
   .sugg-check { display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; }
   .sugg-check input { width: 21px; height: 21px; accent-color: var(--teal); flex: 0 0 auto; }
-  .sugg-name { font-size: 16px; font-weight: 700; color: #333; overflow-wrap: anywhere; }
+  .sugg-name { font-size: 16px; font-weight: 700; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sugg-row.info .sugg-name { color: #666; }
-  .sugg-note { font-size: 14px; color: #999; text-align: right; }
-  .sugg-inputs { display: flex; gap: 10px; flex: 0 0 auto; }
+  .sugg-note { display: block; font-size: 14px; color: #999; margin-top: 3px; }
+  .sugg-inputs { display: flex; gap: 14px; margin: 7px 0 2px 31px; }
   .mini { display: inline-flex; align-items: baseline; gap: 4px; font-size: 13.5px; color: #888; }
   .mini input {
     width: 74px; border: 0; border-bottom: 1px solid #bbb; background: transparent;
