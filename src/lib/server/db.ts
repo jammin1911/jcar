@@ -178,6 +178,26 @@ export const vehicleParts = sqliteTable('vehicle_parts', {
   notes: text('notes').default('')
 });
 
+/** Service reminders, one row per reminder on a vehicle. Intervals and
+ * due odometers are canonical km, the due date is an ISO date. A null
+ * interval or due value means that trigger is not set. */
+export const reminders = sqliteTable('reminders', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  vehicleId: integer('vehicle_id')
+    .notNull()
+    .references(() => vehicles.id),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  title: text('title').notNull(),
+  distanceIntervalKm: real('distance_interval_km'),
+  timeIntervalMonths: integer('time_interval_months'),
+  nextDueOdometer: real('next_due_odometer'),
+  nextDueDate: text('next_due_date'),
+  notes: text('notes').default(''),
+  createdAt: text('created_at').notNull()
+});
+
 export const locations = sqliteTable('locations', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   userId: integer('user_id')
@@ -308,6 +328,18 @@ CREATE TABLE IF NOT EXISTS vehicle_parts (
   quantity REAL,
   notes TEXT DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS reminders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  vehicle_id INTEGER NOT NULL REFERENCES vehicles(id),
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  title TEXT NOT NULL,
+  distance_interval_km REAL,
+  time_interval_months INTEGER,
+  next_due_odometer REAL,
+  next_due_date TEXT,
+  notes TEXT DEFAULT '',
+  created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS locations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id),
@@ -330,6 +362,7 @@ CREATE INDEX IF NOT EXISTS records_vehicle_dt ON records(vehicle_id, datetime, i
 CREATE INDEX IF NOT EXISTS record_photos_record ON record_photos(record_id);
 CREATE INDEX IF NOT EXISTS vehicles_owner ON vehicles(owner_id);
 CREATE INDEX IF NOT EXISTS vehicle_parts_vehicle ON vehicle_parts(vehicle_id);
+CREATE INDEX IF NOT EXISTS reminders_vehicle ON reminders(vehicle_id);
 CREATE INDEX IF NOT EXISTS locations_user ON locations(user_id);
 `;
 

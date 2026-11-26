@@ -103,7 +103,7 @@ async function loadSelectedVehicle(
  * or use the guard inside the Manage Vehicles page actions.
  */
 export async function deleteVehicleCascade(vehicleId: number, exec: Exec = db): Promise<void> {
-  const { records, vehicleParts } = await import('./db');
+  const { records, vehicleParts, reminders } = await import('./db');
   const { purgePhotosForVehicle } = await import('./photos');
   const { bumpUsers, vehicleAudience } = await import('./versions');
   // The audience is read before the shares go, their versions still
@@ -111,6 +111,7 @@ export async function deleteVehicleCascade(vehicleId: number, exec: Exec = db): 
   const audience = await vehicleAudience(exec, vehicleId);
   await purgePhotosForVehicle(vehicleId, exec);
   await exec.delete(records).where(eq(records.vehicleId, vehicleId));
+  await exec.delete(reminders).where(eq(reminders.vehicleId, vehicleId));
   await exec.delete(vehicleParts).where(eq(vehicleParts.vehicleId, vehicleId));
   await exec.delete(vehicleShares).where(eq(vehicleShares.vehicleId, vehicleId));
   await exec.delete(vehicles).where(eq(vehicles.id, vehicleId));

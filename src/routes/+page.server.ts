@@ -7,6 +7,7 @@ import { getUserVehicles, VEHICLE_COOKIE } from '$lib/server/vehicles';
 import { getUserIdentity } from '$lib/server/users';
 import { DEMO_MODE } from '$lib/server/demo';
 import { takeFlash } from '$lib/server/flash';
+import { countDueReminders } from '$lib/server/reminders';
 
 export const load: PageServerLoad = async ({ locals, cookies }) => {
   const user = locals.user!;
@@ -49,8 +50,12 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       }))
     );
   }
+  // Due soon or overdue reminders on the selected vehicle drive the
+  // badge and the ringing icon on the Reminders tile.
+  const reminderDue = selected ? await countDueReminders(selected.vehicle.id) : 0;
   return {
     demoMode: DEMO_MODE,
+    reminderDue,
     pendingInvites,
     pendingInviteList,
     username: user.username,

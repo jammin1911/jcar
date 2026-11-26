@@ -7,6 +7,7 @@ import {
   vehicleShares,
   records,
   vehicleParts,
+  reminders,
   locations,
   userSettings,
   sessions,
@@ -87,6 +88,7 @@ export async function deleteUserCascade(userId: number, exec: Exec = db): Promis
   for (const v of owned) {
     await purgePhotosForVehicle(v.id, exec);
     await exec.delete(records).where(eq(records.vehicleId, v.id));
+    await exec.delete(reminders).where(eq(reminders.vehicleId, v.id));
     await exec.delete(vehicleParts).where(eq(vehicleParts.vehicleId, v.id));
     await exec.delete(vehicleShares).where(eq(vehicleShares.vehicleId, v.id));
   }
@@ -95,6 +97,7 @@ export async function deleteUserCascade(userId: number, exec: Exec = db): Promis
   await purgePhotosForRecords(ownRecs.map((r) => r.id), exec);
   await exec.delete(vehicleShares).where(eq(vehicleShares.userId, userId));
   await exec.delete(records).where(eq(records.userId, userId));
+  await exec.delete(reminders).where(eq(reminders.userId, userId));
   await exec.delete(locations).where(eq(locations.userId, userId));
   const fbRows = await db
     .select({ photoPath: feedbackMessages.photoPath })

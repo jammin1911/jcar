@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { icons, iconsDark, dotsIcon } from '$lib/icons';
+  import { icons, iconsDark, dotsIcon, remindersIcon } from '$lib/icons';
   import SaveToast from '$lib/components/SaveToast.svelte';
 
   let { data } = $props();
@@ -97,7 +97,7 @@
 
   const ic = data.theme === 'dark' ? { ...icons, ...iconsDark } : icons;
 
-  const tiles: { label: string; href: string; icon: string; plus: boolean; dot?: boolean }[] = [
+  const tiles: { label: string; href: string; icon: string; plus: boolean; dot?: boolean; badge?: number }[] = [
     { label: 'Fuel-Up', href: '/fuel-up', icon: ic.fuel, plus: true },
     { label: 'Service', href: '/service', icon: ic.service, plus: true },
     { label: 'Expense', href: '/expense', icon: ic.expense, plus: true },
@@ -108,7 +108,7 @@
     { label: 'Vehicle Details', href: '/vehicle', icon: ic.vehicleDetails, plus: false },
     { label: 'Predictions', href: '/predictions', icon: ic.predictions, plus: false },
     { label: 'Settings', href: '/settings', icon: ic.settings, plus: false },
-    { label: 'Import/Export', href: '/import-export', icon: ic.importExport, plus: false },
+    { label: 'Reminders', href: '/reminders', icon: remindersIcon(data.reminderDue > 0), plus: false, badge: data.reminderDue },
     { label: 'Sharing', href: '/sharing', icon: ic.sharing, plus: false, dot: data.pendingInvites > 0 }
   ];
 </script>
@@ -220,7 +220,7 @@
   <nav class="console-grid">
     {#each tiles as t}
       <a class="tile" href={t.href}>
-        <span class="tile-icon">{@html t.icon}{#if t.plus}<span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg></span>{/if}{#if t.dot}<span class="dot" aria-label="You have a sharing invite waiting"></span>{/if}</span>
+        <span class="tile-icon">{@html t.icon}{#if t.plus}<span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg></span>{/if}{#if t.dot}<span class="dot" aria-label="You have a sharing invite waiting"></span>{/if}{#if t.badge}<span class="badge" aria-label="{t.badge} reminders due">{t.badge}</span>{/if}</span>
         <span>{t.label}</span>
       </a>
     {/each}

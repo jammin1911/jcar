@@ -75,3 +75,69 @@ export const backfillIcon = `<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="t
 // now so no dark overrides are needed here, the export stays because
 // the dashboard and browse pages still merge it over icons
 export const iconsDark: Partial<Record<keyof typeof icons, string>> = {};
+
+// The reminders alarm clock, Johns own artwork. One markup serves
+// both themes, the colours ride the --jca-* variables in app.css.
+// The ringing animation is built into the file, app.css keeps it
+// paused and only lets it play when the tile carries the ringing
+// class, so a still clock means nothing is due.
+export function remindersIcon(ringing: boolean): string {
+  return `<svg class="jc-alarm${ringing ? ' ringing' : ''}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1250 1250" role="img" aria-label="Reminders">
+  <style>
+    .jc-alarm .jca-red { fill:var(--jca-body); }
+    .jc-alarm .jca-metal { fill:var(--jca-metal); }
+    .jc-alarm .jca-face { fill:var(--jca-face); }
+    .jc-alarm .jca-inkfill { fill:var(--jca-ink); }
+    .jc-alarm .jca-hub { fill:var(--jca-hub); }
+    .jc-alarm .jca-ink { stroke:var(--jca-ink); stroke-linecap:round; fill:none; }
+    .jc-alarm .jca-stem { stroke:var(--jca-metal); stroke-width:30; fill:none; }
+    .jc-alarm .jca-shine { fill:var(--jca-shine); }
+    .jc-alarm .jca-ring { transform-box:view-box; transform-origin:626px 1000px; animation:jcaRing 2s ease-in-out infinite; }
+    .jc-alarm .jca-bell { transform-box:view-box; transform-origin:440px 395px; animation:jcaBell 2s ease-in-out infinite; }
+    @keyframes jcaRing {
+      0%,50%,100% { transform:rotate(0); }
+      5%,15%,25% { transform:rotate(-7deg); }
+      10%,20%,30% { transform:rotate(7deg); }
+      35% { transform:rotate(-4deg); }
+      40% { transform:rotate(4deg); }
+      45% { transform:rotate(-2deg); }
+    }
+    @keyframes jcaBell {
+      0%,50%,100% { transform:rotate(0); }
+      5%,15%,25% { transform:rotate(9deg); }
+      10%,20%,30% { transform:rotate(-9deg); }
+      35% { transform:rotate(6deg); }
+      40% { transform:rotate(-6deg); }
+      45% { transform:rotate(3deg); }
+    }
+  </style>
+  <g class="jca-ring">
+    <g>
+      <path class="jca-stem" d="M413 425 L470 383"/>
+      <path class="jca-metal" d="M430 940 L485 975 L460 1005 C445 1015 420 1005 405 985 C400 970 410 955 430 940 Z"/>
+      <g class="jca-bell">
+        <circle class="jca-metal" cx="330" cy="288" r="29"/>
+        <path class="jca-red" d="M312 458 C290 450 272 420 273 392 C275 350 340 262 400 247 C440 238 480 255 520 297 C526 305 524 315 512 323 L335 447 C328 452 320 460 312 458 Z"/>
+        <path class="jca-shine" d="M318 380 C335 345 380 300 418 280 C432 275 436 290 428 300 C410 315 380 320 350 355 C340 368 332 385 322 383 Z"/>
+      </g>
+    </g>
+    <g transform="translate(1252 0) scale(-1 1)">
+      <path class="jca-stem" d="M413 425 L470 383"/>
+      <path class="jca-metal" d="M430 940 L485 975 L460 1005 C445 1015 420 1005 405 985 C400 970 410 955 430 940 Z"/>
+      <g class="jca-bell">
+        <circle class="jca-metal" cx="330" cy="288" r="29"/>
+        <path class="jca-red" d="M312 458 C290 450 272 420 273 392 C275 350 340 262 400 247 C440 238 480 255 520 297 C526 305 524 315 512 323 L335 447 C328 452 320 460 312 458 Z"/>
+        <path class="jca-shine" d="M318 380 C335 345 380 300 418 280 C432 275 436 290 428 300 C410 315 380 320 350 355 C340 368 332 385 322 383 Z"/>
+      </g>
+    </g>
+    <rect class="jca-metal" x="605" y="318" width="45" height="40"/>
+    <rect class="jca-metal" x="569" y="271" width="118" height="54" rx="27"/>
+    <circle class="jca-red" cx="626" cy="679" r="328"/>
+    <circle class="jca-face" cx="626" cy="679" r="272"/>
+    <path class="jca-ink" stroke-width="34" d="M626 443 V477 M626 874 V908 M411 685 H425 M830 685 H860"/>
+    <path class="jca-ink" stroke-width="44" d="M628 554 V680 M640 690 L805 805"/>
+    <circle class="jca-inkfill" cx="627" cy="684" r="42"/>
+    <circle class="jca-hub" cx="627" cy="684" r="26"/>
+  </g>
+</svg>`;
+}

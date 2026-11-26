@@ -67,6 +67,7 @@
   <div class="form-section">Locations</div>
   <a class="manage-link" href="/locations">Manage Locations<span class="chev">&#8250;</span></a>
   <a class="manage-link" href="/vehicles">Manage Vehicles<span class="chev">&#8250;</span></a>
+  <a class="manage-link" href="/import-export">Import / Export<span class="chev">&#8250;</span></a>
 
   {#if form?.saved}
     <p class="saved-note">Settings saved.</p>

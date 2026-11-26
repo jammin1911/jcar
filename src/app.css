@@ -255,6 +255,36 @@ main { flex: 1; }
   border-radius: 50%;
   background: #e53935;
 }
+/* due count on the reminders tile, in the same corner as the dot */
+.tile .badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #e53935;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 22px;
+  text-align: center;
+}
+/* the reminders alarm clock colours, one markup for both themes */
+.tile-icon .jc-alarm { --jca-body: #E8262A; --jca-face: #FAFAFA; --jca-ink: #263238; --jca-metal: #263238; --jca-hub: #3E4C56; --jca-shine: #FF6B6B; }
+.phone[data-theme="dark"] .tile-icon .jc-alarm { --jca-body: #F0393D; --jca-face: #1E272E; --jca-ink: #ECEFF1; --jca-metal: #90A4AE; --jca-hub: #90A4AE; --jca-shine: #FF7B7B; }
+/* the ringing stays paused until the tile says something is due -
+   these selectors outrank the animation shorthand in the icon file */
+.tile .tile-icon .jc-alarm .jca-ring,
+.tile .tile-icon .jc-alarm .jca-bell { animation-play-state: paused; }
+.tile .tile-icon .jc-alarm.ringing .jca-ring,
+.tile .tile-icon .jc-alarm.ringing .jca-bell { animation-play-state: running; }
+@media (prefers-reduced-motion: reduce) {
+  .tile .tile-icon .jc-alarm .jca-ring,
+  .tile .tile-icon .jc-alarm .jca-bell { animation: none; }
+}
 
 /* forms */
 .record-form { padding: 10px 16px 30px; }
@@ -275,6 +305,7 @@ main { flex: 1; }
 .form-row input[type="text"],
 .form-row input[type="number"],
 .form-row input[type="datetime-local"],
+.form-row input[type="date"],
 .form-row select,
 .form-row textarea {
   width: 100%;
@@ -582,6 +613,7 @@ main { flex: 1; }
 .phone[data-theme="dark"] .form-row input[type="text"],
 .phone[data-theme="dark"] .form-row input[type="number"],
 .phone[data-theme="dark"] .form-row input[type="datetime-local"],
+.phone[data-theme="dark"] .form-row input[type="date"],
 .phone[data-theme="dark"] .form-row select,
 .phone[data-theme="dark"] .form-row textarea { border-bottom-color: #4a4f57; }
 .phone[data-theme="dark"] .notes-block textarea { border-bottom-color: #4a4f57; }

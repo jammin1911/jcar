@@ -10,7 +10,9 @@ const MESSAGES: Record<string, string> = {
   fuel: 'Fuel-Up saved successfully',
   service: 'Service saved successfully',
   expense: 'Expense saved successfully',
-  note: 'Note saved successfully'
+  note: 'Note saved successfully',
+  reminder: 'Reminder saved successfully',
+  reminders: 'Reminders saved successfully'
 };
 
 // The only detail a pop-up ever carries is the fuel economy line, and
