@@ -220,7 +220,7 @@
   <nav class="console-grid">
     {#each tiles as t}
       <a class="tile" href={t.href}>
-        <span class="tile-icon">{@html t.icon}{#if t.plus}<span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg></span>{/if}{#if t.dot}<span class="dot" aria-label="You have a sharing invite waiting"></span>{/if}{#if t.badge}<span class="badge" aria-label="{t.badge} reminders due">{t.badge}</span>{/if}</span>
+        <span class="tile-icon">{@html t.icon}{#if t.plus}<span class="plus">{@html ic.plusBadge}</span>{/if}{#if t.dot}<span class="dot" aria-label="You have a sharing invite waiting"></span>{/if}{#if t.badge}<span class="badge" aria-label="{t.badge} reminders due">{t.badge}</span>{/if}</span>
         <span>{t.label}</span>
       </a>
     {/each}
